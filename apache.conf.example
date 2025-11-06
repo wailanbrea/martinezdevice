@@ -1,0 +1,40 @@
+<VirtualHost *:80>
+    ServerName tudominio.com
+    ServerAlias www.tudominio.com
+    DocumentRoot /var/www/martinezdevice/public
+
+    <Directory /var/www/martinezdevice/public>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    # Configuración para archivos grandes (uploads)
+    LimitRequestBody 20971520
+
+    ErrorLog ${APACHE_LOG_DIR}/martinezdevice_error.log
+    CustomLog ${APACHE_LOG_DIR}/martinezdevice_access.log combined
+</VirtualHost>
+
+# Configuración HTTPS (descomentar cuando tengas SSL)
+# <VirtualHost *:443>
+#     ServerName tudominio.com
+#     ServerAlias www.tudominio.com
+#     DocumentRoot /var/www/martinezdevice/public
+#
+#     SSLEngine on
+#     SSLCertificateFile /etc/letsencrypt/live/tudominio.com/fullchain.pem
+#     SSLCertificateKeyFile /etc/letsencrypt/live/tudominio.com/privkey.pem
+#
+#     <Directory /var/www/martinezdevice/public>
+#         Options -Indexes +FollowSymLinks
+#         AllowOverride All
+#         Require all granted
+#     </Directory>
+#
+#     LimitRequestBody 20971520
+#
+#     ErrorLog ${APACHE_LOG_DIR}/martinezdevice_ssl_error.log
+#     CustomLog ${APACHE_LOG_DIR}/martinezdevice_ssl_access.log combined
+# </VirtualHost>
+

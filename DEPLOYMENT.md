@@ -154,6 +154,61 @@ find . -type d -exec chmod 755 {} \;
 - Las migraciones se ejecutan automáticamente con `--force` en producción
 - Los assets (CSS/JS) deben compilarse después de cada actualización
 
+## 🌐 Configuración del Servidor Web
+
+### Nginx
+
+1. **Copiar el archivo de configuración de ejemplo:**
+```bash
+sudo cp nginx.conf.example /etc/nginx/sites-available/martinezdevice
+```
+
+2. **Editar la configuración:**
+```bash
+sudo nano /etc/nginx/sites-available/martinezdevice
+```
+
+3. **Ajustar las siguientes líneas:**
+   - `server_name`: Tu dominio
+   - `root`: Ruta completa al directorio `public` del proyecto
+   - `fastcgi_pass`: Socket de PHP-FPM (puede variar según tu versión de PHP)
+
+4. **Habilitar el sitio:**
+```bash
+sudo ln -s /etc/nginx/sites-available/martinezdevice /etc/nginx/sites-enabled/
+sudo nginx -t  # Verificar configuración
+sudo systemctl reload nginx
+```
+
+### Apache
+
+1. **Copiar el archivo de configuración de ejemplo:**
+```bash
+sudo cp apache.conf.example /etc/apache2/sites-available/martinezdevice.conf
+```
+
+2. **Editar la configuración:**
+```bash
+sudo nano /etc/apache2/sites-available/martinezdevice.conf
+```
+
+3. **Ajustar las siguientes líneas:**
+   - `ServerName`: Tu dominio
+   - `DocumentRoot`: Ruta completa al directorio `public` del proyecto
+
+4. **Habilitar módulos necesarios:**
+```bash
+sudo a2enmod rewrite
+sudo a2enmod ssl  # Si usas HTTPS
+```
+
+5. **Habilitar el sitio:**
+```bash
+sudo a2ensite martinezdevice.conf
+sudo apache2ctl configtest  # Verificar configuración
+sudo systemctl reload apache2
+```
+
 ## 🆘 Solución de Problemas
 
 ### Error: "No such file or directory"
@@ -169,6 +224,10 @@ chmod -R 775 storage
 # Dar permisos correctos
 chmod -R 775 storage bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
+
+# Si no eres root, usar sudo:
+sudo chmod -R 775 storage bootstrap/cache
+sudo chown -R www-data:www-data storage bootstrap/cache
 ```
 
 ### Error: "Class not found"
@@ -179,6 +238,62 @@ php artisan optimize:clear
 php artisan optimize
 ```
 
+### Error: "No se puede conectar a la base de datos"
+```bash
+# Verificar que MySQL/MariaDB está corriendo
+sudo systemctl status mysql
+# o
+sudo systemctl status mariadb
+
+# Verificar credenciales en .env
+php artisan db:show
+
+# Probar conexión manual
+mysql -u tu_usuario -p -h 127.0.0.1 martinez_device
+```
+
+### Error: "APP_KEY is not set"
+```bash
+# Generar nueva clave de aplicación
+php artisan key:generate
+```
+
+### Error: "The stream or file could not be opened"
+```bash
+# Verificar permisos de storage
+sudo chmod -R 775 storage
+sudo chown -R www-data:www-data storage
+
+# Verificar que los directorios existen
+mkdir -p storage/framework/{sessions,views,cache}
+mkdir -p storage/logs
+```
+
+### Error: "500 Internal Server Error"
+```bash
+# Verificar logs de Laravel
+tail -f storage/logs/laravel.log
+
+# Verificar logs del servidor web
+# Nginx:
+sudo tail -f /var/log/nginx/error.log
+
+# Apache:
+sudo tail -f /var/log/apache2/error.log
+
+# Limpiar cachés
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+```
+
+### Error: "Route [login] not defined"
+```bash
+# Limpiar caché de rutas
+php artisan route:clear
+php artisan route:cache
+```
+
 ### Base de datos no actualizada
 ```bash
 # Verificar migraciones pendientes
@@ -186,6 +301,38 @@ php artisan migrate:status
 
 # Ejecutar migraciones
 php artisan migrate --force
+
+# Si hay errores, verificar la conexión primero
+php artisan db:show
+```
+
+### Error: "Storage link already exists"
+```bash
+# Eliminar enlace existente y recrear
+rm public/storage
+php artisan storage:link
+```
+
+### Error: "Composer memory limit"
+```bash
+# Aumentar límite de memoria de PHP para Composer
+php -d memory_limit=-1 /usr/bin/composer install --no-dev --optimize-autoloader
+```
+
+### Verificar requisitos del sistema
+```bash
+# Verificar versión de PHP (debe ser >= 8.3)
+php -v
+
+# Verificar extensiones PHP necesarias
+php -m | grep -E "pdo|mysql|mbstring|xml|openssl|json|gd|zip"
+
+# Verificar Composer
+composer --version
+
+# Verificar Node.js y NPM (si usas assets)
+node -v
+npm -v
 ```
 
 ---
