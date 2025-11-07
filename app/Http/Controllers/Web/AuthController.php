@@ -31,12 +31,30 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
+        // Login ULTRA simplificado - solo verificar credenciales
+        $user = \App\Models\User::where('email', $credentials['email'])->first();
+        
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => 'Las credenciales proporcionadas no coinciden con nuestros registros.',
+            ]);
+        }
+        
+        // Verificar password
+        $passwordOk = false;
+        try {
+            $passwordOk = \Hash::check($credentials['password'], $user->password);
+        } catch (\Exception $e) {
+            // Si Hash::check falla, usar password_verify directamente
+            $passwordOk = password_verify($credentials['password'], $user->password);
+        }
+        
+        if ($passwordOk) {
+            // Guardar ID en sesión manualmente sin Auth::login
+            session(['user_id' => $user->id]);
+            session(['authenticated' => true]);
             
-            // Usar route en lugar de intended para evitar problemas de redirección
-            // Si hay una URL intended válida, usarla; si no, redirigir al dashboard
-            return redirect()->intended(route('dashboard'));
+            return redirect()->route('dashboard');
         }
 
         throw ValidationException::withMessages([

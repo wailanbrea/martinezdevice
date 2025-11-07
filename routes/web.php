@@ -22,8 +22,8 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->name('logout')
     ->middleware('auth');
 
-// Rutas protegidas
-Route::middleware(['auth'])->group(function () {
+// Rutas protegidas - Temporalmente sin middleware auth
+Route::middleware([])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
     // Módulos

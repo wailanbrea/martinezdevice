@@ -163,6 +163,18 @@ function getTutorialSteps(route) {
 
 // Iniciar el tutorial
 function startTutorial(force = false) {
+    // Verificar que no estamos en la página de login
+    const currentPath = window.location.pathname;
+    if (currentPath === '/login' || currentPath.startsWith('/login')) {
+        return; // No ejecutar tutorial en la página de login
+    }
+    
+    // Verificar que introJs está disponible
+    if (typeof introJs === 'undefined') {
+        console.warn('Intro.js no está cargado');
+        return;
+    }
+    
     const route = getCurrentRoute();
     
     // Si no es forzado y ya se vio el tutorial, no iniciar
@@ -176,38 +188,72 @@ function startTutorial(force = false) {
         return;
     }
     
+    // Verificar que los elementos de los pasos existen antes de iniciar
+    const validSteps = steps.filter(step => {
+        if (!step.element) return false;
+        const element = document.querySelector(step.element);
+        return element !== null;
+    });
+    
+    if (validSteps.length === 0) {
+        return; // No iniciar si no hay elementos válidos
+    }
+    
     // Configurar Intro.js
-    introJs().setOptions({
-        steps: steps,
-        showProgress: true,
-        showBullets: true,
-        exitOnOverlayClick: false,
-        exitOnEsc: true,
-        prevLabel: 'Anterior',
-        nextLabel: 'Siguiente',
-        skipLabel: 'Omitir',
-        doneLabel: 'Finalizar',
-        tooltipClass: 'customTooltip',
-        highlightClass: 'customHighlight',
-        buttonClass: 'introjs-button'
-    }).oncomplete(function() {
-        // Marcar como visto cuando se completa
-        markTutorialAsSeen(route);
-    }).onexit(function() {
-        // Marcar como visto cuando se sale
-        markTutorialAsSeen(route);
-    }).start();
+    try {
+        introJs().setOptions({
+            steps: validSteps,
+            showProgress: true,
+            showBullets: true,
+            exitOnOverlayClick: false,
+            exitOnEsc: true,
+            prevLabel: 'Anterior',
+            nextLabel: 'Siguiente',
+            skipLabel: 'Omitir',
+            doneLabel: 'Finalizar',
+            tooltipClass: 'customTooltip',
+            highlightClass: 'customHighlight',
+            buttonClass: 'introjs-button'
+        }).oncomplete(function() {
+            // Marcar como visto cuando se completa
+            markTutorialAsSeen(route);
+        }).onexit(function() {
+            // Marcar como visto cuando se sale
+            markTutorialAsSeen(route);
+        }).start();
+    } catch (error) {
+        console.error('Error al iniciar el tutorial:', error);
+    }
 }
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
+    // Verificar que no estamos en la página de login
+    const currentPath = window.location.pathname;
+    if (currentPath === '/login' || currentPath.startsWith('/login')) {
+        return; // No ejecutar tutorial en la página de login
+    }
+    
+    // Verificar que los elementos necesarios existen antes de iniciar
+    const sidebar = document.querySelector('.sidebar-nav');
+    const tutorialBtn = document.getElementById('tutorialBtn');
+    
+    // Si no hay sidebar, probablemente no estamos en una página con layout completo
+    if (!sidebar) {
+        return; // No ejecutar si no hay sidebar
+    }
+    
     // Esperar un poco para que los elementos se rendericen
     setTimeout(function() {
+        // Verificar nuevamente que los elementos existen
+        if (!document.querySelector('.sidebar-nav')) {
+            return; // Salir si aún no existen los elementos
+        }
+        
         // Iniciar tutorial automáticamente si es la primera vez
         startTutorial(false);
         
         // Botón para reactivar el tutorial
-        const tutorialBtn = document.getElementById('tutorialBtn');
         if (tutorialBtn) {
             tutorialBtn.addEventListener('click', function(e) {
                 e.preventDefault();

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Rol;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,13 +16,21 @@ class DatabaseSeeder extends Seeder
         $this->call(RolSeeder::class);
 
         // Crear usuario administrador
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@martinezservice.com'],
-            [
+        // Insertar directamente para evitar problemas con SensitiveParameterValue
+        $adminExists = DB::table('users')->where('email', 'admin@martinezservice.com')->exists();
+        if (!$adminExists) {
+            $passwordHash = password_hash('password', PASSWORD_BCRYPT);
+            $adminId = DB::table('users')->insertGetId([
                 'name' => 'Administrador',
-                'password' => Hash::make('password'),
-            ]
-        );
+                'email' => 'admin@martinezservice.com',
+                'password' => $passwordHash,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $admin = User::find($adminId);
+        } else {
+            $admin = User::where('email', 'admin@martinezservice.com')->first();
+        }
 
         // Asegurar que siempre tenga el rol de administrador
         $rolAdmin = Rol::where('slug', 'administrador')->first();

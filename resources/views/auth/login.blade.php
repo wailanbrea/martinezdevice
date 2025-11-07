@@ -241,14 +241,32 @@
     <script>
         // Cargar modo oscuro inmediatamente para evitar flash
         (function() {
-            const savedMode = localStorage.getItem('darkMode');
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            // Verificar que el DOM esté listo
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initDarkMode);
+            } else {
+                initDarkMode();
+            }
             
-            if (savedMode === 'enabled' || (!savedMode && prefersDark)) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                document.body.classList.add('dark-mode');
-                const icon = document.getElementById('darkModeIconLogin');
-                if (icon) icon.className = 'bi bi-sun-fill';
+            function initDarkMode() {
+                const savedMode = localStorage.getItem('darkMode');
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                
+                if (savedMode === 'enabled' || (!savedMode && prefersDark)) {
+                    if (document.documentElement) {
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                    }
+                    if (document.body) {
+                        document.body.classList.add('dark-mode');
+                    }
+                    // Esperar a que el elemento esté disponible
+                    setTimeout(function() {
+                        const icon = document.getElementById('darkModeIconLogin');
+                        if (icon) {
+                            icon.className = 'bi bi-sun-fill';
+                        }
+                    }, 0);
+                }
             }
         })();
 
@@ -257,10 +275,13 @@
             const darkModeToggle = document.getElementById('darkModeToggleLogin');
             const darkModeIcon = document.getElementById('darkModeIconLogin');
             
-            if (darkModeToggle) {
+            if (darkModeToggle && document.body) {
                 darkModeToggle.addEventListener('click', function() {
                     const html = document.documentElement;
                     const body = document.body;
+                    
+                    if (!html || !body) return;
+                    
                     const isDark = html.getAttribute('data-theme') === 'dark' || body.classList.contains('dark-mode');
                     
                     if (!isDark) {

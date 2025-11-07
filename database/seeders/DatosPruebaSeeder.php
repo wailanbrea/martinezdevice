@@ -14,6 +14,7 @@ use App\Models\HistorialEstado;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
@@ -36,38 +37,42 @@ class DatosPruebaSeeder extends Seeder
             [
                 'name' => 'Juan Pérez',
                 'email' => 'juan.perez@martinezservice.com',
-                'password' => Hash::make('password'),
                 'rol' => $rolTecnico,
             ],
             [
                 'name' => 'María García',
                 'email' => 'maria.garcia@martinezservice.com',
-                'password' => Hash::make('password'),
                 'rol' => $rolTecnico,
             ],
             [
                 'name' => 'Carlos Rodríguez',
                 'email' => 'carlos.rodriguez@martinezservice.com',
-                'password' => Hash::make('password'),
                 'rol' => $rolRecepcion,
             ],
             [
                 'name' => 'Ana Martínez',
                 'email' => 'ana.martinez@martinezservice.com',
-                'password' => Hash::make('password'),
                 'rol' => $rolContabilidad,
             ],
         ];
 
         $usuariosCreados = [];
         foreach ($usuarios as $usuarioData) {
-            $usuario = User::firstOrCreate(
-                ['email' => $usuarioData['email']],
-                [
+            // Insertar directamente para evitar problemas con SensitiveParameterValue
+            $userExists = DB::table('users')->where('email', $usuarioData['email'])->exists();
+            if (!$userExists) {
+                $passwordHash = password_hash('password', PASSWORD_BCRYPT);
+                $userId = DB::table('users')->insertGetId([
                     'name' => $usuarioData['name'],
-                    'password' => $usuarioData['password'],
-                ]
-            );
+                    'email' => $usuarioData['email'],
+                    'password' => $passwordHash,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $usuario = User::find($userId);
+            } else {
+                $usuario = User::where('email', $usuarioData['email'])->first();
+            }
             $usuario->roles()->syncWithoutDetaching([$usuarioData['rol']->id]);
             $usuariosCreados[] = $usuario;
         }

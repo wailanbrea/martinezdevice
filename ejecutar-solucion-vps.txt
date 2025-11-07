@@ -1,0 +1,30 @@
+# ============================================
+# COMANDOS PARA EJECUTAR EN EL VPS
+# Copia y pega estos comandos en tu terminal SSH
+# ============================================
+
+# 1. Conectarse al VPS
+ssh usuario@62.171.174.191
+
+# 2. Ir al directorio del proyecto
+cd /var/www/martinezdevice
+
+# 3. Actualizar desde GitHub
+sudo git pull origin main
+
+# 4. Dar permisos de ejecución a los scripts
+sudo chmod +x diagnosticar-vps-520.sh
+sudo chmod +x solucionar-error-520-login.sh
+
+# 5. Ejecutar el script de solución
+sudo bash solucionar-error-520-login.sh
+
+# ============================================
+# O si el script no está actualizado en GitHub:
+# ============================================
+
+# Crear el script manualmente:
+sudo nano solucionar-error-520-login.sh
+
+# Luego pega este contenido (Ctrl+Shift+V en la terminal):
+
