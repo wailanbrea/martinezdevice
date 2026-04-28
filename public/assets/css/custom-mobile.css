@@ -1,0 +1,349 @@
+/**
+ * MartinezService - Custom Mobile Styles
+ * Optimización para dispositivos móviles
+ */
+
+/* Mejoras generales para móviles */
+@media (max-width: 1199.98px) {
+    /* Asegurar que el sidebar funcione correctamente en móvil */
+    .sidenav {
+        transform: translateX(-17.125rem);
+        transition: transform 0.3s ease-in-out;
+        position: fixed;
+        z-index: 9999 !important;
+        height: 100vh;
+        margin-left: 0 !important;
+        margin-top: 0 !important;
+        left: 0;
+        top: 0;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Botón de cerrar X mejorado para móvil */
+    .sidenav #iconSidenav {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    .sidenav #iconSidenav:active {
+        transform: scale(0.9);
+        opacity: 0.7 !important;
+    }
+    
+    .g-sidenav-show .sidenav {
+        transform: translateX(0);
+    }
+    
+    .g-sidenav-pinned .sidenav {
+        transform: translateX(0);
+    }
+    
+    .g-sidenav-hidden .sidenav {
+        transform: translateX(-17.125rem);
+    }
+    
+    /* Botón hamburguesa visible en móvil */
+    #iconNavbarSidenav {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0.75rem;
+        z-index: 10;
+        position: relative;
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+        touch-action: manipulation;
+        user-select: none;
+    }
+    
+    #iconNavbarSidenav:active {
+        transform: scale(0.95);
+    }
+    
+    .sidenav-toggler-inner {
+        width: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .sidenav-toggler-line {
+        width: 100%;
+        height: 3px;
+        background: white;
+        display: block;
+        transition: all 0.3s ease;
+        border-radius: 2px;
+        pointer-events: none;
+    }
+    
+    /* Animación del botón hamburguesa cuando está abierto */
+    .g-sidenav-show #iconNavbarSidenav .sidenav-toggler-line:nth-child(1) {
+        transform: rotate(45deg) translateY(8px);
+    }
+    
+    .g-sidenav-show #iconNavbarSidenav .sidenav-toggler-line:nth-child(2) {
+        opacity: 0;
+    }
+    
+    .g-sidenav-show #iconNavbarSidenav .sidenav-toggler-line:nth-child(3) {
+        transform: rotate(-45deg) translateY(-8px);
+    }
+    
+    /* Overlay cuando el menú está abierto en móvil */
+    .g-sidenav-show::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        z-index: 1050;
+        opacity: 1;
+        pointer-events: auto;
+        transition: opacity 0.3s ease-in-out;
+        backdrop-filter: blur(2px);
+    }
+    
+    /* Ajustar contenido principal en móvil */
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+    
+    /* Cards responsivos */
+    .card {
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Tablas responsivas */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Botones en móvil */
+    .btn {
+        padding: 0.625rem 1.25rem;
+        font-size: 0.875rem;
+    }
+    
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    /* Formularios en móvil */
+    .form-control {
+        font-size: 16px; /* Prevenir zoom en iOS */
+    }
+    
+    /* Navbar superior en móvil */
+    .navbar-main {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        position: sticky;
+        top: 0;
+        z-index: 1200;
+    }
+    
+    /* Asegurar que el navbar sea visible en móvil */
+    .navbar-main .container-fluid {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    /* Usuario y cerrar sesión en barra superior (móvil) */
+    #navbarMobileUser {
+        min-height: 44px;
+    }
+    #navbarMobileUser .nav-link {
+        min-width: 44px;
+        min-height: 44px;
+        justify-content: center;
+    }
+    #navbarMobileUser .text-truncate {
+        max-width: 80px;
+    }
+
+    #navbarHamburgerWrapper {
+        min-height: 44px;
+        min-width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #navbarHamburgerWrapper .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Mejorar visibilidad del breadcrumb en móvil */
+    .navbar-main .breadcrumb {
+        font-size: 0.75rem;
+    }
+    
+    .navbar-main h6 {
+        font-size: 1rem;
+    }
+    
+    /* Contenedor fluido en móvil */
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    /* Títulos en móvil */
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.25rem;
+    }
+    
+    /* Stats cards en móvil */
+    .card-body {
+        padding: 1.25rem;
+    }
+    
+    /* Mejorar legibilidad de texto en móvil */
+    body {
+        font-size: 0.9375rem;
+    }
+    
+    /* Ajustar padding de columnas en móvil */
+    .row > * {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+}
+
+/* Para tablets (iPad, etc.) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .sidenav {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 17.125rem !important;
+    }
+}
+
+/* Para pantallas muy pequeñas (320px) */
+@media (max-width: 575.98px) {
+    .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.813rem;
+    }
+    
+    /* Tablas más compactas en pantallas pequeñas */
+    .table {
+        font-size: 0.813rem;
+    }
+    
+    .table td,
+    .table th {
+        padding: 0.5rem;
+    }
+    
+    /* Reducir espacio en formularios */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    /* Ajustar modales en móvil */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+
+/* Mejoras para el sidebar en móvil */
+@media (max-width: 991.98px) {
+    .sidenav .navbar-brand {
+        padding: 1rem;
+    }
+    
+    .sidenav .nav-link {
+        padding: 0.75rem 1rem;
+    }
+    
+    .sidenav .nav-link-text {
+        opacity: 1 !important;
+    }
+    
+    .sidenav .icon {
+        margin-right: 0.75rem;
+    }
+}
+
+/* Touch improvements */
+@media (hover: none) and (pointer: coarse) {
+    /* Aumentar área de click en dispositivos táctiles */
+    .nav-link,
+    .btn,
+    a.btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    /* Mejorar feedback táctil */
+    .btn:active,
+    .nav-link:active,
+    .card:active {
+        transform: scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    /* Desactivar el efecto hover en móviles */
+    * {
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Mejorar scrolling en móvil */
+    * {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Landscape mode en móviles */
+@media (max-width: 991.98px) and (orientation: landscape) {
+    .sidenav {
+        max-height: 100vh;
+        overflow-y: auto;
+    }
+}
+
+/* Optimizaciones de rendimiento */
+.sidenav,
+.main-content {
+    will-change: transform;
+}
+
+/* Prevenir text selection durante swipes */
+@media (max-width: 991.98px) {
+    .g-sidenav-show {
+        overflow: hidden;
+    }
+}
+
