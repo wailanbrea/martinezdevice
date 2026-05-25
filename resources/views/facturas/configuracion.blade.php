@@ -76,6 +76,17 @@
                                 </div>
 
                                 <div class="col-md-4 mb-3">
+                                    <div class="form-check form-switch mt-4">
+                                        <input class="form-check-input" type="checkbox" name="impuestos_activos" id="impuestos_activos"
+                                               {{ old('impuestos_activos', $configuracion->impuestos_activos ?? true) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="impuestos_activos">
+                                            Activar impuestos en el sistema
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Si se desactiva, no se calcularán ni se mostrarán impuestos en cotizaciones, facturas y resúmenes.</small>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label">Teléfono</label>
                                     <input type="text" name="empresa_telefono" class="form-control @error('empresa_telefono') is-invalid @enderror" 
                                            value="{{ old('empresa_telefono', $configuracion->empresa_telefono) }}">
@@ -136,7 +147,7 @@
                                     <input type="number" name="impuesto_porcentaje" step="0.01" min="0" max="100" 
                                            class="form-control @error('impuesto_porcentaje') is-invalid @enderror" 
                                            value="{{ old('impuesto_porcentaje', $configuracion->impuesto_porcentaje) }}">
-                                    <small class="text-muted">Dejar vacío si no se aplica impuesto por defecto</small>
+                                    <small class="text-muted">Solo se usa cuando los impuestos están activos.</small>
                                     @error('impuesto_porcentaje')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -270,4 +281,3 @@
         @include('layouts.footers.auth.footer')
     </div>
 @endsection
-

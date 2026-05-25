@@ -52,8 +52,9 @@ class FacturaController extends Controller
     {
         $factura->load(['cliente', 'equipo', 'reparacion']);
         $configuracion = FacturaConfiguracion::obtener();
+        $mostrarImpuestos = $configuracion->impuestosHabilitados();
         
-        return view('facturas.show', compact('factura', 'configuracion'));
+        return view('facturas.show', compact('factura', 'configuracion', 'mostrarImpuestos'));
     }
 
     /**
@@ -65,7 +66,8 @@ class FacturaController extends Controller
         $configuracion = FacturaConfiguracion::obtener();
         $recibidoPor = $this->obtenerRecibidoPor($factura);
         $preparadoPor = $this->obtenerPreparadoPor($factura);
-        $pdf = Pdf::loadView('facturas.formato', compact('factura', 'configuracion', 'recibidoPor', 'preparadoPor'));
+        $mostrarImpuestos = $configuracion->impuestosHabilitados();
+        $pdf = Pdf::loadView('facturas.formato', compact('factura', 'configuracion', 'recibidoPor', 'preparadoPor', 'mostrarImpuestos'));
         $pdf->setPaper('A4', 'portrait');
         
         return $pdf->stream('factura-' . $factura->numero_factura . '.pdf');
@@ -80,7 +82,8 @@ class FacturaController extends Controller
         $configuracion = FacturaConfiguracion::obtener();
         $recibidoPor = $this->obtenerRecibidoPor($factura);
         $preparadoPor = $this->obtenerPreparadoPor($factura);
-        $pdf = Pdf::loadView('facturas.formato', compact('factura', 'configuracion', 'recibidoPor', 'preparadoPor'));
+        $mostrarImpuestos = $configuracion->impuestosHabilitados();
+        $pdf = Pdf::loadView('facturas.formato', compact('factura', 'configuracion', 'recibidoPor', 'preparadoPor', 'mostrarImpuestos'));
         $pdf->setPaper('A4', 'portrait');
         
         // Guardar PDF temporalmente
@@ -132,8 +135,9 @@ class FacturaController extends Controller
 
         $factura->load(['cliente', 'equipo', 'reparacion']);
         $configuracion = FacturaConfiguracion::obtener();
+        $mostrarImpuestos = $configuracion->impuestosHabilitados();
         
-        return view('facturas.edit', compact('factura', 'configuracion'));
+        return view('facturas.edit', compact('factura', 'configuracion', 'mostrarImpuestos'));
     }
 
     /**
@@ -173,12 +177,11 @@ class FacturaController extends Controller
         ]);
 
         $configuracion = FacturaConfiguracion::obtener();
-        $aplicarImpuesto = $request->has('aplicar_impuesto') && $request->aplicar_impuesto == '1';
+        $aplicarImpuesto = $configuracion->debeAplicarImpuesto($request->has('aplicar_impuesto') && $request->aplicar_impuesto == '1');
         $subtotal = (float) $validated['subtotal'];
 
         if ($aplicarImpuesto) {
-            // Siempre calcular impuestos desde el porcentaje configurado (ej. 18%), sin depender del NCF
-            $porcentajeImpuesto = $configuracion->impuesto_porcentaje ?? 18.00;
+            $porcentajeImpuesto = $configuracion->porcentajeImpuestoActivo();
             $validated['impuestos'] = round(($subtotal * $porcentajeImpuesto) / 100, 2);
             $validated['total'] = $subtotal + $validated['impuestos'];
             $ncfCodigo = \App\Models\SistemaConfiguracion::obtenerNcfCodigo();
@@ -225,7 +228,7 @@ class FacturaController extends Controller
         }
         $usuario = $reparacion->tecnicoCompleto ?? $reparacion->tecnico;
         if (!$usuario) {
-            $estadoFinalizado = $reparacion->historialEstados()->whereIn('estado', ['Finalizado', 'Entregado'])->orderBy('created_at', 'desc')->first();
+            $estadoFinalizado = $reparacion->historialEstados()->whereIn('estado', ['Finalizado', 'Sin Reparación', 'Entregado'])->orderBy('created_at', 'desc')->first();
             $usuario = $estadoFinalizado?->usuario;
         }
         return $usuario ? trim(($usuario->firstname ?? '') . ' ' . ($usuario->lastname ?? '')) ?: ($usuario->username ?? '') : '';

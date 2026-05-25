@@ -90,7 +90,9 @@
                                                 <tr>
                                                     <th>Descripción</th>
                                                     <th class="text-end">Subtotal</th>
+                                                    @if($mostrarImpuestos)
                                                     <th class="text-end">Impuestos</th>
+                                                    @endif
                                                     <th class="text-end">Total</th>
                                                 </tr>
                                             </thead>
@@ -115,6 +117,7 @@
                                                             <div class="invalid-feedback">{{ $message }}</div>
                                                         @enderror
                                                     </td>
+                                                    @if($mostrarImpuestos)
                                                     <td class="text-end">
                                                         <input type="number" name="impuestos" step="0.01" min="0" 
                                                                class="form-control text-end @error('impuestos') is-invalid @enderror" 
@@ -124,6 +127,9 @@
                                                             <div class="invalid-feedback">{{ $message }}</div>
                                                         @enderror
                                                     </td>
+                                                    @else
+                                                    <input type="hidden" name="impuestos" id="impuestos" value="0">
+                                                    @endif
                                                     <td class="text-end">
                                                         <strong id="total-display">{{ $configuracion->simbolo_moneda }}{{ number_format($factura->total, 2) }}</strong>
                                                         <input type="hidden" name="total" id="total" value="{{ old('total', $factura->total) }}">
@@ -137,6 +143,7 @@
 
                             <div class="row mb-4">
                                 <div class="col-md-6">
+                                    @if($mostrarImpuestos)
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" name="aplicar_impuesto" id="aplicar_impuesto" value="1" 
                                                {{ old('aplicar_impuesto', $factura->aplicar_impuesto) ? 'checked' : '' }}>
@@ -157,6 +164,7 @@
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
+                                    @endif
                                 </div>
                             </div>
 
@@ -186,7 +194,7 @@
             const ncfContainer = document.getElementById('ncf-container');
             const configuracion = @json($configuracion);
 
-            // Calcular total cuando cambian subtotal o impuestos
+            // Calcular total mostrando el estado real del checkbox de impuesto
             function calcularTotal() {
                 const subtotal = parseFloat(subtotalInput.value) || 0;
                 const impuestos = parseFloat(impuestosInput.value) || 0;
@@ -196,29 +204,41 @@
                 totalDisplay.textContent = configuracion.simbolo_moneda + total.toFixed(2);
             }
 
-            subtotalInput.addEventListener('input', calcularTotal);
-            impuestosInput.addEventListener('input', calcularTotal);
-
             // Porcentaje de impuesto: usar el configurado o 18% por defecto (el backend siempre recalcula al guardar)
-            const porcentajeImpuesto = (configuracion.impuesto_porcentaje != null && configuracion.impuesto_porcentaje !== '') 
-                ? parseFloat(configuracion.impuesto_porcentaje) : 18;
+            const porcentajeImpuesto = (configuracion.impuestos_activos && configuracion.impuesto_porcentaje != null && configuracion.impuesto_porcentaje !== '') 
+                ? parseFloat(configuracion.impuesto_porcentaje) : 0;
 
-            // Mostrar/ocultar campo NCF según checkbox; calcular impuestos al activar (el impuesto se aplica con o sin NCF)
-            aplicarImpuestoCheck.addEventListener('change', function() {
-                if (this.checked) {
-                    ncfContainer.style.display = 'block';
-                    const subtotal = parseFloat(subtotalInput.value) || 0;
+            function sincronizarImpuestos() {
+                const subtotal = parseFloat(subtotalInput.value) || 0;
+
+                if (aplicarImpuestoCheck && aplicarImpuestoCheck.checked) {
                     const impuestos = (subtotal * porcentajeImpuesto) / 100;
                     impuestosInput.value = impuestos.toFixed(2);
-                    calcularTotal();
+                    impuestosInput.readOnly = true;
                 } else {
-                    ncfContainer.style.display = 'none';
                     impuestosInput.value = '0.00';
-                    calcularTotal();
+                    impuestosInput.readOnly = false;
                 }
-            });
+
+                calcularTotal();
+            }
+
+            subtotalInput.addEventListener('input', sincronizarImpuestos);
+            impuestosInput.addEventListener('input', calcularTotal);
+
+            // Mostrar/ocultar campo NCF según checkbox; calcular impuestos al activar (el impuesto se aplica con o sin NCF)
+            if (aplicarImpuestoCheck) {
+                aplicarImpuestoCheck.addEventListener('change', function() {
+                    if (ncfContainer) {
+                        ncfContainer.style.display = this.checked ? 'block' : 'none';
+                    }
+
+                    sincronizarImpuestos();
+                });
+            }
+
+            sincronizarImpuestos();
         });
     </script>
     @endpush
 @endsection
-

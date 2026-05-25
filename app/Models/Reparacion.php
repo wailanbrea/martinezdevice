@@ -9,6 +9,9 @@ class Reparacion extends Model
 {
     use HasFactory;
 
+    public const ESTADO_LISTO_LEGACY = 'listo';
+    public const ESTADO_FINALIZADO = 'Finalizado';
+
     protected $table = 'reparaciones';
 
     protected $fillable = [
@@ -60,6 +63,7 @@ class Reparacion extends Model
         'cliente_aprobado' => 'boolean',
         'aplicar_impuesto_cotizacion' => 'boolean',
         'es_garantia' => 'boolean',
+        'periodo_garantia_dias' => 'integer',
     ];
 
     /**
@@ -175,5 +179,32 @@ class Reparacion extends Model
     public function reparacionesGarantia()
     {
         return $this->hasMany(Reparacion::class, 'reparacion_original_id');
+    }
+
+    public function getEstadoAttribute($value)
+    {
+        return $value === self::ESTADO_LISTO_LEGACY
+            ? self::ESTADO_FINALIZADO
+            : $value;
+    }
+
+    public function setEstadoAttribute($value): void
+    {
+        $this->attributes['estado'] = $value === self::ESTADO_LISTO_LEGACY
+            ? self::ESTADO_FINALIZADO
+            : $value;
+    }
+
+    public function scopeWhereEstadoNormalizado($query, ?string $estado)
+    {
+        if ($estado === null || $estado === '') {
+            return $query;
+        }
+
+        if ($estado === self::ESTADO_FINALIZADO) {
+            return $query->whereIn('estado', [self::ESTADO_FINALIZADO, self::ESTADO_LISTO_LEGACY]);
+        }
+
+        return $query->where('estado', $estado);
     }
 }

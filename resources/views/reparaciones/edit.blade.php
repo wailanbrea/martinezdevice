@@ -65,6 +65,7 @@
                                         <option value="Esperando Pieza" {{ $reparacion->estado == 'Esperando Pieza' ? 'selected' : '' }}>Esperando Pieza</option>
                                         <option value="En Proceso" {{ $reparacion->estado == 'En Proceso' ? 'selected' : '' }}>En Proceso</option>
                                         <option value="Finalizado" {{ $reparacion->estado == 'Finalizado' ? 'selected' : '' }}>Finalizado</option>
+                                        <option value="Sin Reparación" {{ $reparacion->estado == 'Sin Reparación' ? 'selected' : '' }}>Sin Reparación</option>
                                         <option value="Entregado" {{ $reparacion->estado == 'Entregado' ? 'selected' : '' }}>Entregado</option>
                                         <option value="Cancelado" {{ $reparacion->estado == 'Cancelado' ? 'selected' : '' }}>Cancelado</option>
                                     </select>
@@ -228,32 +229,35 @@
                                     @enderror
                                 </div>
 
+                                @if($impuestosActivos ?? true)
                                 <div class="col-md-6 mb-3">
                                     <div class="form-check mt-4">
+                                        <input type="hidden" name="aplicar_impuesto" value="0">
                                         <input class="form-check-input" type="checkbox" name="aplicar_impuesto" id="aplicar_impuesto" value="1" 
-                                               {{ old('aplicar_impuesto', $reparacion->factura ? $reparacion->factura->aplicar_impuesto : ($reparacion->aplicar_impuesto_cotizacion ?? true)) ? 'checked' : '' }}>
+                                               {{ old('aplicar_impuesto', $reparacion->factura ? $reparacion->factura->aplicar_impuesto : ($reparacion->aplicar_impuesto_cotizacion ?? false)) ? 'checked' : '' }}>
                                         <label class="form-check-label" for="aplicar_impuesto">
                                             <strong>Aplicar Impuesto</strong>
                                         </label>
                                         <small class="form-text text-muted d-block">
-                                            Por defecto se aplica impuesto ({{ number_format($porcentajeImpuesto ?? 18, 0) }}%). Desmarque si no aplica.
+                                            Marque esta opción solo si desea aplicar impuesto ({{ number_format($porcentajeImpuesto ?? 18, 0) }}%).
                                         </small>
                                     </div>
                                     <div id="total-con-impuesto-edit" class="mt-2 small text-success fw-bold" style="display: none;">
                                         Total con impuesto: $<span id="total-impuesto-valor">0.00</span>
                                     </div>
                                 </div>
+                                @endif
 
                                 <div class="col-12 mb-3">
-                                    <label class="form-label">Descripción de la Cotización</label>
+                                    <label class="form-label">Descripción del servicio / cotización</label>
                                     <textarea name="descripcion_cotizacion" class="form-control @error('descripcion_cotizacion') is-invalid @enderror" 
-                                              rows="5" placeholder="Describa qué tiene el equipo, qué piezas necesita (si aplica) y qué se le hará...">{{ $reparacion->descripcion_cotizacion }}</textarea>
+                                              rows="5" placeholder="Describa el diagnóstico, servicio, revisión, piezas necesarias o el motivo por el cual no fue reparable...">{{ $reparacion->descripcion_cotizacion }}</textarea>
                                     <small class="form-text text-muted">
-                                        Esta descripción será visible para el cliente en la consulta pública. Incluya:
+                                        Esta descripción será visible para el cliente y también puede usarse para cobros de revisión, diagnóstico o servicio mínimo.
                                         <ul class="mb-0 mt-1">
-                                            <li>Problema detectado en el equipo</li>
-                                            <li>Piezas necesarias (si aplica, o indique "No requiere piezas")</li>
-                                            <li>Trabajos a realizar</li>
+                                            <li>Diagnóstico o hallazgo técnico</li>
+                                            <li>Costo por revisión, mano de obra o piezas si aplica</li>
+                                            <li>Trabajos a realizar o motivo de no reparación</li>
                                         </ul>
                                     </small>
                                     @error('descripcion_cotizacion')
@@ -288,7 +292,7 @@
 
     @push('js')
     <script>
-        const porcentajeImpuestoEdit = {{ $porcentajeImpuesto ?? 18 }};
+        const porcentajeImpuestoEdit = {{ $porcentajeImpuesto ?? 0 }};
         function actualizarTotalConImpuesto() {
             const precioInput = document.getElementById('precio_cotizado_edit');
             const aplicarCheck = document.getElementById('aplicar_impuesto');
@@ -296,7 +300,7 @@
             const totalValor = document.getElementById('total-impuesto-valor');
             if (!precioInput || !totalBlock || !totalValor) return;
             const subtotal = parseFloat(precioInput.value) || 0;
-            const aplicar = aplicarCheck ? aplicarCheck.checked : true;
+            const aplicar = aplicarCheck ? aplicarCheck.checked : false;
             if (subtotal > 0 && aplicar) {
                 const impuestos = (subtotal * porcentajeImpuestoEdit) / 100;
                 totalValor.textContent = (subtotal + impuestos).toFixed(2);

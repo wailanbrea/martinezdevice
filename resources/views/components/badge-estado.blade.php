@@ -10,6 +10,7 @@
         'Aprobado' => 'bg-success',
         'En Proceso' => 'bg-info',
         'Finalizado' => 'bg-success',
+        'Sin Reparación' => 'bg-warning',
         'Entregado' => 'bg-primary',
         'Cancelado' => 'bg-danger',
         default => 'bg-secondary',

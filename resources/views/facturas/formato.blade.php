@@ -5,7 +5,7 @@
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;
-            font-size: 12px;
+            font-size: 14px;
             margin: 0;
             padding: 20px;
         }
@@ -83,7 +83,7 @@
         </tr>
     </table>
 
-    <div class="center bold mt-20" style="font-size:15px;">
+    <div class="center bold mt-20" style="font-size:18px;">
         @if($factura->reparacion)
             {{ strtoupper($factura->reparacion->tipo_servicio === 'mantenimiento' ? 'MANTENIMIENTO' : 'REPARACIÓN') }}
             @if($factura->equipo)
@@ -102,7 +102,9 @@
                 <th>UM</th>
                 <th>DESCRIPCIÓN</th>
                 <th>PRECIO</th>
+                @if($mostrarImpuestos)
                 <th>IMPUESTO</th>
+                @endif
                 <th>IMPORTE</th>
             </tr>
         </thead>
@@ -112,11 +114,7 @@
                 <td>Unidad(es)</td>
                 <td>
                     @if($factura->reparacion)
-                        @if($factura->reparacion->tipo_servicio === 'mantenimiento')
-                            MANTENIMIENTO
-                        @else
-                            REPARACIÓN
-                        @endif
+                        {{ $factura->reparacion->descripcion_cotizacion ?: ($factura->reparacion->tipo_servicio === 'mantenimiento' ? 'MANTENIMIENTO' : ($factura->reparacion->estado === 'Sin Reparación' ? 'DIAGNOSTICO / REVISION' : 'REPARACIÓN')) }}
                         @if($factura->equipo)
                             - {{ $factura->equipo->tipo ?? 'N/A' }} 
                             {{ $factura->equipo->marca ?? '' }} 
@@ -132,6 +130,7 @@
                     @endif
                 </td>
                 <td class="right">{{ $configuracion->simbolo_moneda }}{{ number_format($factura->subtotal, 2) }}</td>
+                @if($mostrarImpuestos)
                 <td class="right">
                     @if($factura->aplicar_impuesto)
                         {{ $configuracion->simbolo_moneda }}{{ number_format($factura->impuestos, 2) }}
@@ -139,6 +138,7 @@
                         {{ $configuracion->simbolo_moneda }}0.00
                     @endif
                 </td>
+                @endif
                 <td class="right">{{ $configuracion->simbolo_moneda }}{{ number_format($factura->subtotal, 2) }}</td>
             </tr>
         </tbody>
@@ -186,4 +186,3 @@
 
 </body>
 </html>
-

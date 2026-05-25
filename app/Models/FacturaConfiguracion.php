@@ -26,6 +26,7 @@ class FacturaConfiguracion extends Model
         'pie_factura',
         'terminos_condiciones',
         'impuesto_porcentaje',
+        'impuestos_activos',
         'ncf_codigo',
         'moneda',
         'simbolo_moneda',
@@ -36,6 +37,7 @@ class FacturaConfiguracion extends Model
 
     protected $casts = [
         'impuesto_porcentaje' => 'decimal:2',
+        'impuestos_activos' => 'boolean',
         'mostrar_logo' => 'boolean',
         'mostrar_terminos' => 'boolean',
     ];
@@ -44,6 +46,25 @@ class FacturaConfiguracion extends Model
     {
         static::saved(fn () => Cache::forget(self::CACHE_KEY));
         static::deleted(fn () => Cache::forget(self::CACHE_KEY));
+    }
+
+    public function impuestosHabilitados(): bool
+    {
+        return (bool) ($this->impuestos_activos ?? true);
+    }
+
+    public function porcentajeImpuestoActivo(): float
+    {
+        if (!$this->impuestosHabilitados()) {
+            return 0.0;
+        }
+
+        return (float) ($this->impuesto_porcentaje ?? 0);
+    }
+
+    public function debeAplicarImpuesto(?bool $preferencia = true): bool
+    {
+        return $this->impuestosHabilitados() && (bool) $preferencia;
     }
 
     /**

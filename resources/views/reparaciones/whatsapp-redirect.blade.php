@@ -13,13 +13,19 @@
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-4 text-center">
                         <div class="spinner-border text-success mb-3" role="status" aria-hidden="true"></div>
-                        <h1 class="h4 mb-3">Abriendo WhatsApp en una ventana nueva</h1>
+                        <h1 class="h4 mb-3">
+                            {{ !empty($openInSameTab) ? 'Abriendo WhatsApp' : 'Abriendo WhatsApp en una ventana nueva' }}
+                        </h1>
                         <p class="text-muted mb-4">{{ $successMessage }}</p>
                         <p class="small text-muted mb-4">
-                            Si tu navegador bloquea la ventana, usa el botón de abajo. Luego volverás automáticamente al sistema.
+                            @if(!empty($openInSameTab))
+                                En computadora este flujo evita bloqueos del navegador abriendo WhatsApp en esta misma pestaña.
+                            @else
+                                Si tu navegador bloquea la ventana, usa el botón de abajo. Luego volverás automáticamente al sistema.
+                            @endif
                         </p>
                         <div class="d-grid gap-2">
-                            <a href="{{ $urlWhatsApp }}" target="_blank" rel="noopener" class="btn btn-success">
+                            <a href="{{ $urlWhatsApp }}" @if(empty($openInSameTab)) target="_blank" rel="noopener" @endif class="btn btn-success">
                                 Abrir WhatsApp
                             </a>
                             <a href="{{ $returnUrl }}" class="btn btn-outline-secondary">
@@ -33,10 +39,18 @@
     </div>
 
     <script>
-        window.open(@json($urlWhatsApp), '_blank', 'noopener');
-        setTimeout(function () {
-            window.location.href = @json($returnUrl);
-        }, 900);
+        const openInSameTab = @json(!empty($openInSameTab));
+        const urlWhatsApp = @json($urlWhatsApp);
+        const returnUrl = @json($returnUrl);
+
+        if (openInSameTab) {
+            window.location.replace(urlWhatsApp);
+        } else {
+            window.open(urlWhatsApp, '_blank', 'noopener');
+            setTimeout(function () {
+                window.location.href = returnUrl;
+            }, 900);
+        }
     </script>
 </body>
 </html>

@@ -291,10 +291,12 @@
                                     @enderror
                                 </div>
 
+                                @if($impuestosActivos ?? true)
                                 <!-- Checkbox Aplicar Impuesto (solo para mantenimiento con precio) -->
                                 <div class="col-md-6 mb-3" id="aplicar_impuesto_container" style="display: none;">
                                     <div class="form-check mt-4">
-                                        <input class="form-check-input" type="checkbox" name="aplicar_impuesto" id="aplicar_impuesto" value="1" {{ old('aplicar_impuesto', true) ? 'checked' : '' }}>
+                                        <input type="hidden" name="aplicar_impuesto" value="0">
+                                        <input class="form-check-input" type="checkbox" name="aplicar_impuesto" id="aplicar_impuesto" value="1" {{ old('aplicar_impuesto', false) ? 'checked' : '' }}>
                                         <label class="form-check-label" for="aplicar_impuesto">
                                             <strong>Aplicar Impuesto</strong>
                                         </label>
@@ -303,6 +305,7 @@
                                         </small>
                                     </div>
                                 </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -727,11 +730,12 @@
                 const precioCotizadoContainer = document.getElementById('precio_cotizado_container');
                 const aplicarImpuestoContainer = document.getElementById('aplicar_impuesto_container');
                 const precioCotizadoInput = document.getElementById('precio_cotizado');
+                const impuestosActivos = @json($impuestosActivos ?? true);
                 
                 function togglePrecioFields() {
                     if (tipoServicio && tipoServicio.value === 'mantenimiento') {
                         if (precioCotizadoContainer) precioCotizadoContainer.style.display = 'block';
-                        if (aplicarImpuestoContainer) aplicarImpuestoContainer.style.display = 'block';
+                        if (aplicarImpuestoContainer) aplicarImpuestoContainer.style.display = impuestosActivos ? 'block' : 'none';
                     } else {
                         if (precioCotizadoContainer) precioCotizadoContainer.style.display = 'none';
                         if (aplicarImpuestoContainer) aplicarImpuestoContainer.style.display = 'none';

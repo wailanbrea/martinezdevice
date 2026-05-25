@@ -30,7 +30,7 @@
                                     <span class="d-md-none">Tomar</span>
                                 </button>
                             </form>
-                        @elseif($reparacion->tecnico_id == auth()->id() && !in_array($reparacion->estado, ['Finalizado', 'Entregado']))
+                        @elseif($reparacion->tecnico_id == auth()->id() && !in_array($reparacion->estado, ['Finalizado', 'Sin Reparación', 'Entregado']))
                             <form action="{{ route('reparaciones.completar-trabajo', $reparacion->id) }}" method="POST" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-success btn-responsive" onclick="return confirm('¿Marcar este trabajo como completado? Se calculará la comisión automáticamente.');">
@@ -197,6 +197,7 @@
                                         <option value="Esperando Pieza" {{ $reparacion->estado == 'Esperando Pieza' ? 'selected' : '' }}>Esperando Pieza</option>
                                         <option value="En Proceso" {{ $reparacion->estado == 'En Proceso' ? 'selected' : '' }}>En Proceso</option>
                                         <option value="Finalizado" {{ $reparacion->estado == 'Finalizado' ? 'selected' : '' }}>Finalizado</option>
+                                        <option value="Sin Reparación" {{ $reparacion->estado == 'Sin Reparación' ? 'selected' : '' }}>Sin Reparación</option>
                                         <option value="Entregado" {{ $reparacion->estado == 'Entregado' ? 'selected' : '' }}>Entregado</option>
                                         <option value="Cancelado" {{ $reparacion->estado == 'Cancelado' ? 'selected' : '' }}>Cancelado</option>
                                     </select>
@@ -229,6 +230,7 @@
                                 @elseif($reparacion->estado == 'Esperando Pieza') bg-orange
                                 @elseif($reparacion->estado == 'En Proceso') bg-info
                                 @elseif($reparacion->estado == 'Finalizado') bg-success
+                                @elseif($reparacion->estado == 'Sin Reparación') bg-warning
                                 @elseif($reparacion->estado == 'Entregado') bg-primary
                                 @else bg-danger
                                 @endif px-3 py-2">
@@ -507,16 +509,16 @@
                             $tienePrecioCotizado = $reparacion->precio_cotizado && $reparacion->precio_cotizado > 0;
                             $cotizacionAprobada = $reparacion->cliente_aprobado === true;
                             $totalEstimado = (float) ($reparacion->total_estimado ?? 0);
-                            $aplicarImpuestoCot = $reparacion->factura ? $reparacion->factura->aplicar_impuesto : ($reparacion->aplicar_impuesto_cotizacion ?? true);
-                            $pctImp = isset($porcentajeImpuesto) ? (float) $porcentajeImpuesto : 18.00;
-                            $subtotalCot = $tienePrecioCotizado ? (float) $reparacion->precio_cotizado : 0;
+                            $subtotalCot = $tienePrecioCotizado ? (float) $reparacion->precio_cotizado : $totalEstimado;
+                    $aplicarImpuestoCot = ($impuestosActivos ?? true) && ($reparacion->factura ? $reparacion->factura->aplicar_impuesto : ($reparacion->aplicar_impuesto_cotizacion ?? false));
+                            $pctImp = isset($porcentajeImpuesto) ? (float) $porcentajeImpuesto : 0;
                             $impuestosCot = ($subtotalCot > 0 && $aplicarImpuestoCot) ? round($subtotalCot * ($pctImp / 100), 2) : 0;
                             $totalConImpuesto = $subtotalCot + $impuestosCot;
                         @endphp
                         
                         @if($tienePrecioCotizado)
                             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                                <span class="text-muted">Precio Cotizado (subtotal):</span>
+                                <span class="text-muted">{{ $reparacion->estado === 'Sin Reparación' ? 'Costo del servicio:' : 'Precio Cotizado (subtotal):' }}</span>
                                 <span class="fw-bold">${{ number_format($subtotalCot, 2) }}@if(!$cotizacionAprobada) <small class="text-muted">(Pendiente)</small>@endif</span>
                             </div>
                             @if($aplicarImpuestoCot)
@@ -531,7 +533,7 @@
                                     <span class="text-muted small">${{ number_format($totalEstimado, 2) }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold fs-6">{{ $cotizacionAprobada ? 'Total Aprobado:' : 'Total a pagar (cotizado):' }}</span>
+                                    <span class="fw-bold fs-5">{{ $cotizacionAprobada ? 'Total Aprobado:' : ($reparacion->estado === 'Sin Reparación' ? 'Total a cobrar:' : 'Total a pagar (cotizado):') }}</span>
                                     <span class="h4 fw-bold {{ $cotizacionAprobada ? 'text-success' : 'text-primary' }} mb-0">${{ number_format($totalConImpuesto, 2) }}</span>
                                 </div>
                             </div>
@@ -539,7 +541,7 @@
                             {{-- Si no hay precio cotizado, mostrar solo el total estimado --}}
                             <div class="border-top pt-3 mt-3">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold fs-6">Total Estimado:</span>
+                                    <span class="fw-bold fs-5">{{ $reparacion->estado === 'Sin Reparación' ? 'Costo del servicio:' : 'Total Estimado:' }}</span>
                                     <span class="h4 fw-bold text-primary mb-0">${{ number_format($totalEstimado, 2) }}</span>
                                 </div>
                             </div>
@@ -674,6 +676,22 @@
                                                         <i class="fas fa-info-circle me-1 text-info"></i>
                                                         {{ $historial->comentario }}
                                                     </p>
+                                                    @if(auth()->user()->hasRole('administrador'))
+                                                        <div class="d-flex gap-2 mt-2">
+                                                            <button type="button"
+                                                                    class="btn btn-outline-primary btn-sm py-1 px-2"
+                                                                    onclick="editarComentarioHistorial('{{ route('reparaciones.historial.update', [$reparacion->id, $historial->id]) }}', @js($historial->comentario))">
+                                                                <i class="fas fa-pen me-1"></i>Editar
+                                                            </button>
+                                                            <form method="POST" action="{{ route('reparaciones.historial.destroy', [$reparacion->id, $historial->id]) }}" onsubmit="return confirm('¿Quitar este comentario del historial?');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-2">
+                                                                    <i class="fas fa-trash me-1"></i>Quitar
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             @endif
                                         </div>
@@ -695,6 +713,28 @@
 
     @push('js')
     <script>
+        function editarComentarioHistorial(actionUrl, comentarioActual) {
+            const nuevoComentario = prompt('Editar comentario del historial:', comentarioActual ?? '');
+            if (nuevoComentario === null) {
+                return;
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = actionUrl;
+            form.style.display = 'none';
+
+            form.innerHTML = `
+                <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="_method" value="PUT">
+                <input type="hidden" name="comentario" value="">
+            `;
+
+            form.querySelector('input[name="comentario"]').value = nuevoComentario;
+            document.body.appendChild(form);
+            form.submit();
+        }
+
         function editarCampo(campo) {
             const equipoId = {{ $reparacion->equipo->id }};
             let valorActual, label, inputType = 'text';

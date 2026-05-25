@@ -60,6 +60,7 @@
                     <span class="nav-link-text ms-1">Equipos</span>
                 </a>
             </li>
+            @if(auth()->check() && auth()->user()->hasRole('administrador'))
             <li class="nav-item">
                 <a class="nav-link {{ str_contains(request()->url(), 'contabilidad') ? 'active' : '' }}" href="{{ route('contabilidad.index') }}">
                     <div
@@ -69,6 +70,7 @@
                     <span class="nav-link-text ms-1">Contabilidad</span>
                 </a>
             </li>
+            @endif
             <li class="nav-item">
                 <a class="nav-link {{ str_contains(request()->url(), 'actividad-usuarios') ? 'active' : '' }}" href="{{ route('actividad-usuarios.index') }}">
                     <div
@@ -78,6 +80,7 @@
                     <span class="nav-link-text ms-1">Actividad Usuarios</span>
                 </a>
             </li>
+            @if(auth()->check() && auth()->user()->hasRole('administrador'))
             <li class="nav-item">
                 <a class="nav-link {{ str_contains(request()->url(), 'facturas') && !str_contains(request()->url(), 'configuracion') ? 'active' : '' }}" href="{{ route('facturas.index') }}">
                     <div
@@ -87,6 +90,7 @@
                     <span class="nav-link-text ms-1">Facturas</span>
                 </a>
             </li>
+            @endif
             <li class="nav-item mt-3">
                 <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">Configuración</h6>
             </li>
@@ -101,6 +105,7 @@
                 </a>
             </li>
             @endif
+            @if(auth()->check() && auth()->user()->hasRole('administrador'))
             <li class="nav-item">
                 <a class="nav-link {{ str_contains(request()->url(), 'facturas/configuracion') ? 'active' : '' }}" href="{{ route('facturas.configuracion') }}">
                     <div
@@ -119,6 +124,7 @@
                     <span class="nav-link-text ms-1">Configurar Sistema</span>
                 </a>
             </li>
+            @endif
             <li class="nav-item mt-3">
                 <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">Cuenta</h6>
             </li>

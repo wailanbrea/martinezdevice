@@ -69,7 +69,7 @@ class ReparacionesController extends Controller
                 // Estados pendientes: todos los que no están finalizados o entregados
                 $query->whereIn('estado', self::ESTADOS_PENDIENTES);
             } else {
-                $query->where('estado', $request->estado);
+                $query->whereEstadoNormalizado($request->estado);
             }
         }
 
@@ -161,7 +161,11 @@ class ReparacionesController extends Controller
             return User::orderBy('firstname', 'asc')->get(['id', 'firstname', 'lastname']);
         });
 
-        return view('reparaciones.create', compact('clientes', 'tecnicos', 'usuarios'));
+        $configFactura = FacturaConfiguracion::obtener();
+        $porcentajeImpuesto = $configFactura->porcentajeImpuestoActivo();
+        $impuestosActivos = $configFactura->impuestosHabilitados();
+
+        return view('reparaciones.create', compact('clientes', 'tecnicos', 'usuarios', 'porcentajeImpuesto', 'impuestosActivos'));
     }
 
     /**
@@ -182,15 +186,17 @@ class ReparacionesController extends Controller
             'tecnico_id' => 'nullable|exists:users,id',
             'fecha_prometida' => 'nullable|date',
             'precio_cotizado' => 'nullable|numeric|min:0',
+            'es_garantia' => 'nullable|boolean',
+            'periodo_garantia_dias' => 'nullable|integer|min:1|max:365|required_if:es_garantia,1',
+            'reparacion_original_id' => 'nullable|exists:reparaciones,id|required_if:es_garantia,1',
             'fotos.*' => 'nullable|image|max:5120', // 5MB max por foto
         ], [
             'cliente_id.exists' => 'El cliente seleccionado no existe.',
             'recepcionista_id.exists' => 'El personal seleccionado no existe.',
             'tecnico_id.exists' => 'El técnico seleccionado no existe.',
             'tipo_personalizado.required_if' => 'Debe especificar el tipo cuando selecciona "Otro".',
-            'es_garantia' => 'nullable|boolean',
-            'periodo_garantia_dias' => 'nullable|integer|min:1|max:365',
-            'reparacion_original_id' => 'nullable|exists:reparaciones,id',
+            'periodo_garantia_dias.required_if' => 'El período de garantía es requerido cuando es una reparación en garantía.',
+            'reparacion_original_id.required_if' => 'Debe seleccionar la reparación original cuando es una reparación en garantía.',
         ]);
 
         // Obtener recepcionista antes de la transacción para optimizar
@@ -200,10 +206,12 @@ class ReparacionesController extends Controller
         // Obtener configuración de factura antes de la transacción (si es necesario)
         $configFactura = null;
         if ($validated['tipo_servicio'] === 'mantenimiento' && ($validated['precio_cotizado'] ?? null)) {
-            $configFactura = DB::table('factura_configuracion')->first(['impuesto_porcentaje']);
+            $configFactura = FacturaConfiguracion::obtener();
         }
 
-        $aplicarImpuestoCotizacion = $request->boolean('aplicar_impuesto');
+        $aplicarImpuestoCotizacion = $configFactura
+            ? $configFactura->debeAplicarImpuesto($request->boolean('aplicar_impuesto'))
+            : $request->boolean('aplicar_impuesto');
 
         // Usar transacción solo para operaciones críticas de base de datos
         $result = DB::transaction(function () use ($validated, $recepcionistaNombre, $configFactura, $aplicarImpuestoCotizacion) {
@@ -242,9 +250,11 @@ class ReparacionesController extends Controller
 
             // Calcular fecha de vencimiento de garantía si es garantía
             $fechaVencimientoGarantia = null;
-            if (!empty($validated['es_garantia']) && !empty($validated['periodo_garantia_dias'])) {
-                $fechaVencimientoGarantia = Carbon::now()->addDays($validated['periodo_garantia_dias']);
-            }
+        if (!empty($validated['es_garantia']) && !empty($validated['periodo_garantia_dias'])) {
+            $periodoGarantiaDias = (int) $validated['periodo_garantia_dias'];
+            $validated['periodo_garantia_dias'] = $periodoGarantiaDias;
+            $fechaVencimientoGarantia = Carbon::now()->addDays($periodoGarantiaDias);
+        }
 
             // Generar código de reparación de forma thread-safe
             $ultimoId = Reparacion::lockForUpdate()->max('id') ?? 0;
@@ -281,9 +291,8 @@ class ReparacionesController extends Controller
 
             // Si es mantenimiento y tiene precio, generar factura inmediatamente
             if ($validated['tipo_servicio'] === 'mantenimiento' && ($validated['precio_cotizado'] ?? null)) {
-                // 18% aplicado por defecto (unchecked = no aplicar)
-                $aplicarImpuesto = $request->input('aplicar_impuesto', '1') == '1';
-                $porcentajeImpuesto = $aplicarImpuesto ? ($configFactura->impuesto_porcentaje ?? 18.00) : 0;
+                $aplicarImpuesto = $configFactura?->debeAplicarImpuesto($aplicarImpuestoCotizacion) ?? $aplicarImpuestoCotizacion;
+                $porcentajeImpuesto = $aplicarImpuesto ? ($configFactura?->porcentajeImpuestoActivo() ?? 0) : 0;
                 
                 $subtotal = $validated['precio_cotizado'];
                 $impuestos = $aplicarImpuesto ? (($subtotal * $porcentajeImpuesto) / 100) : 0;
@@ -421,10 +430,11 @@ class ReparacionesController extends Controller
             'reparacionesGarantia.equipo.cliente:id,nombre'
         ])->findOrFail($id);
 
-        $configFactura = DB::table('factura_configuracion')->first(['impuesto_porcentaje']);
-        $porcentajeImpuesto = $configFactura->impuesto_porcentaje ?? 18.00;
+        $configFactura = FacturaConfiguracion::obtener();
+        $porcentajeImpuesto = $configFactura->porcentajeImpuestoActivo();
+        $impuestosActivos = $configFactura->impuestosHabilitados();
 
-        return view('reparaciones.responsive-show', compact('reparacion', 'porcentajeImpuesto'));
+        return view('reparaciones.responsive-show', compact('reparacion', 'porcentajeImpuesto', 'impuestosActivos'));
     }
 
     /**
@@ -450,7 +460,10 @@ class ReparacionesController extends Controller
         // Obtener reparaciones finalizadas/entregadas para el selector de reparación original - Optimizado
         $reparacionesOriginales = Cache::remember('reparaciones.originales', 300, function () use ($id) {
             return Reparacion::select('id', 'codigo_reparacion', 'equipo_id', 'fecha_finalizacion')
-                ->whereIn('estado', ['Finalizado', 'Entregado'])
+                ->where(function ($query) {
+                    $query->whereEstadoNormalizado('Finalizado')
+                        ->orWhere('estado', 'Entregado');
+                })
                 ->where('id', '!=', $id) // Excluir la reparación actual
                 ->with([
                     'equipo:id,cliente_id,marca,modelo',
@@ -461,10 +474,11 @@ class ReparacionesController extends Controller
                 ->get(['id', 'codigo_reparacion', 'equipo_id', 'fecha_finalizacion']);
         });
 
-        $configFactura = DB::table('factura_configuracion')->first(['impuesto_porcentaje']);
-        $porcentajeImpuesto = $configFactura->impuesto_porcentaje ?? 18.00;
+        $configFactura = FacturaConfiguracion::obtener();
+        $porcentajeImpuesto = $configFactura->porcentajeImpuestoActivo();
+        $impuestosActivos = $configFactura->impuestosHabilitados();
 
-        return view('reparaciones.edit', compact('reparacion', 'tecnicos', 'reparacionesOriginales', 'porcentajeImpuesto'));
+        return view('reparaciones.edit', compact('reparacion', 'tecnicos', 'reparacionesOriginales', 'porcentajeImpuesto', 'impuestosActivos'));
     }
 
     /**
@@ -473,10 +487,14 @@ class ReparacionesController extends Controller
     public function update(Request $request, string $id)
     {
         $reparacion = Reparacion::findOrFail($id);
+        $configFactura = FacturaConfiguracion::obtener();
+        $aplicarImpuestoCotizacion = $request->has('aplicar_impuesto')
+            ? $configFactura->debeAplicarImpuesto($request->boolean('aplicar_impuesto'))
+            : $configFactura->debeAplicarImpuesto($reparacion->factura?->aplicar_impuesto ?? $reparacion->aplicar_impuesto_cotizacion ?? false);
 
         $validated = $request->validate([
             'tecnico_id' => 'nullable|exists:users,id',
-            'estado' => 'nullable|string|in:Recibido,En Diagnóstico,Pendiente Revisión Admin,Esperando Aprobación,Aprobado,Esperando Pieza,En Proceso,Finalizado,Entregado,Cancelado',
+            'estado' => 'nullable|string|in:Recibido,En Diagnóstico,Pendiente Revisión Admin,Esperando Aprobación,Aprobado,Esperando Pieza,En Proceso,Finalizado,Sin Reparación,Entregado,Cancelado',
             'fecha_prometida' => 'nullable|date',
             'costo_diagnostico' => 'nullable|numeric|min:0',
             'costo_piezas' => 'nullable|numeric|min:0',
@@ -543,7 +561,7 @@ class ReparacionesController extends Controller
         }
 
         // Guardar si se aplica impuesto a la cotización (para mostrar correctamente en consulta pública)
-        $validated['aplicar_impuesto_cotizacion'] = $request->boolean('aplicar_impuesto');
+        $validated['aplicar_impuesto_cotizacion'] = $aplicarImpuestoCotizacion;
 
         // Si cambió el estado, registrar en historial con información detallada
         $estadoAnterior = $reparacion->estado;
@@ -579,6 +597,9 @@ class ReparacionesController extends Controller
                     case 'Finalizado':
                         $comentario = 'Reparación finalizada. Equipo listo para entrega';
                         break;
+                    case 'Sin Reparación':
+                        $comentario = 'Diagnóstico finalizado. El equipo no pudo ser reparado.';
+                        break;
                     case 'Entregado':
                         $comentario = 'Equipo entregado al cliente';
                         break;
@@ -597,8 +618,8 @@ class ReparacionesController extends Controller
                 'usuario_id' => auth()->id(),
             ]);
 
-            // Si el estado cambia a "Finalizado" o "Entregado", establecer fecha_finalizacion y calcular comisión
-            if (in_array($validated['estado'], ['Finalizado', 'Entregado']) && !$reparacion->fecha_finalizacion) {
+            // Si el estado cambia a un cierre operativo, establecer fecha_finalizacion y calcular comisión
+            if (in_array($validated['estado'], ['Finalizado', 'Sin Reparación', 'Entregado']) && !$reparacion->fecha_finalizacion) {
                 $validated['fecha_finalizacion'] = Carbon::now();
                 
                 // Calcular comisión si hay un técnico asignado y un monto total
@@ -611,7 +632,7 @@ class ReparacionesController extends Controller
                     $validated['porcentaje_comision'] = $porcentajeComision;
                     
                     // Calcular monto de comisión basado en el total (precio_cotizado o total_estimado)
-                    $montoBase = $reparacion->precio_cotizado ?? $reparacion->total_estimado ?? 0;
+                    $montoBase = (float) ($validated['precio_cotizado'] ?? $reparacion->precio_cotizado ?? $validated['total_estimado'] ?? $reparacion->total_estimado ?? 0);
                     if ($montoBase > 0) {
                         $validated['monto_comision'] = ($montoBase * $porcentajeComision) / 100;
                     }
@@ -619,7 +640,7 @@ class ReparacionesController extends Controller
                 
                 // Si es garantía y tiene período de garantía, calcular fecha de vencimiento
                 $esGarantia = isset($validated['es_garantia']) ? !empty($validated['es_garantia']) : $reparacion->es_garantia;
-                $periodoGarantia = isset($validated['periodo_garantia_dias']) ? $validated['periodo_garantia_dias'] : $reparacion->periodo_garantia_dias;
+                $periodoGarantia = isset($validated['periodo_garantia_dias']) ? (int) $validated['periodo_garantia_dias'] : (int) $reparacion->periodo_garantia_dias;
                 
                 if ($esGarantia && $periodoGarantia && !$reparacion->fecha_vencimiento_garantia) {
                     $validated['fecha_vencimiento_garantia'] = Carbon::now()->addDays($periodoGarantia);
@@ -633,19 +654,17 @@ class ReparacionesController extends Controller
                     // Determinar el precio final a usar
                     if ($reparacion->cliente_aprobado === true && $reparacion->precio_cotizado) {
                         // Si está aprobado, usar precio_cotizado
-                        $precioFinal = $reparacion->precio_cotizado;
+                        $precioFinal = (float) ($validated['precio_cotizado'] ?? $reparacion->precio_cotizado);
                     } elseif ($reparacion->precio_cotizado) {
                         // Si hay precio_cotizado pero no está aprobado, usar precio_cotizado
-                        $precioFinal = $reparacion->precio_cotizado;
+                        $precioFinal = (float) ($validated['precio_cotizado'] ?? $reparacion->precio_cotizado);
                     } else {
                         // Si no hay precio_cotizado, usar total_estimado
-                        $precioFinal = $reparacion->total_estimado ?? 0;
+                        $precioFinal = (float) ($validated['total_estimado'] ?? $reparacion->total_estimado ?? 0);
                     }
                     
-                    // Obtener configuración de factura para calcular impuestos (18% por defecto)
-                    $configFactura = DB::table('factura_configuracion')->first();
-                    $aplicarImpuesto = $request->input('aplicar_impuesto', '1') == '1';
-                    $porcentajeImpuesto = $aplicarImpuesto ? ($configFactura->impuesto_porcentaje ?? 18.00) : 0;
+                    $aplicarImpuesto = $configFactura->debeAplicarImpuesto($aplicarImpuestoCotizacion);
+                    $porcentajeImpuesto = $aplicarImpuesto ? $configFactura->porcentajeImpuestoActivo() : 0;
                     
                     $subtotal = $precioFinal;
                     $impuestos = $aplicarImpuesto ? (($subtotal * $porcentajeImpuesto) / 100) : 0;
@@ -670,13 +689,16 @@ class ReparacionesController extends Controller
                             'total' => $total,
                         ]);
                     }
-                } elseif ($reparacion->precio_cotizado) {
-                    // Si no hay factura pero está aprobada o tiene precio_cotizado, crear factura (18% por defecto)
-                    $configFactura = DB::table('factura_configuracion')->first();
-                    $aplicarImpuesto = $request->input('aplicar_impuesto', '1') == '1';
-                    $porcentajeImpuesto = $configFactura->impuesto_porcentaje ?? 18.00;
-                    
-                    $precioFinal = $reparacion->precio_cotizado ?? $reparacion->total_estimado ?? 0;
+                } else {
+                    $precioFinal = (float) ($validated['precio_cotizado'] ?? $reparacion->precio_cotizado ?? $validated['total_estimado'] ?? $reparacion->total_estimado ?? 0);
+                    if ($precioFinal <= 0) {
+                        $precioFinal = (float) ($validated['total_estimado'] ?? $reparacion->total_estimado ?? 0);
+                    }
+
+                    if ($precioFinal > 0) {
+                        $aplicarImpuesto = $configFactura->debeAplicarImpuesto($aplicarImpuestoCotizacion);
+                        $porcentajeImpuesto = $aplicarImpuesto ? $configFactura->porcentajeImpuestoActivo() : 0;
+
                     $subtotal = $precioFinal;
                     $impuestos = $aplicarImpuesto ? (($subtotal * $porcentajeImpuesto) / 100) : 0;
                     $total = $subtotal + $impuestos;
@@ -691,19 +713,20 @@ class ReparacionesController extends Controller
                     $ultimoId = Factura::lockForUpdate()->max('id') ?? 0;
                     $numeroFactura = 'FAC-' . date('Y') . '-' . str_pad($ultimoId + 1, 6, '0', STR_PAD_LEFT);
                     
-                    Factura::create([
-                        'reparacion_id' => $reparacion->id,
-                        'equipo_id' => $reparacion->equipo_id,
-                        'cliente_id' => $reparacion->equipo->cliente_id,
-                        'numero_factura' => $numeroFactura,
-                        'fecha_emision' => Carbon::now(),
-                        'subtotal' => $subtotal,
-                        'aplicar_impuesto' => $aplicarImpuesto,
-                        'ncf' => $ncf,
-                        'impuestos' => $impuestos,
-                        'total' => $total,
-                        'forma_pago' => 'efectivo',
-                    ]);
+                        Factura::create([
+                            'reparacion_id' => $reparacion->id,
+                            'equipo_id' => $reparacion->equipo_id,
+                            'cliente_id' => $reparacion->equipo->cliente_id,
+                            'numero_factura' => $numeroFactura,
+                            'fecha_emision' => Carbon::now(),
+                            'subtotal' => $subtotal,
+                            'aplicar_impuesto' => $aplicarImpuesto,
+                            'ncf' => $ncf,
+                            'impuestos' => $impuestos,
+                            'total' => $total,
+                            'forma_pago' => 'efectivo',
+                        ]);
+                    }
                 }
                 
                 // Agregar registro adicional para fecha de entrega
@@ -724,6 +747,7 @@ class ReparacionesController extends Controller
             
             // Si se marca como garantía y tiene período, calcular fecha de vencimiento si no existe
             if ($validated['es_garantia'] && isset($validated['periodo_garantia_dias']) && $validated['periodo_garantia_dias']) {
+                $validated['periodo_garantia_dias'] = (int) $validated['periodo_garantia_dias'];
                 // Si ya tiene fecha de finalización, calcular desde ahí, sino desde ahora
                 $fechaBase = $reparacion->fecha_finalizacion ?? Carbon::now();
                 if (!$reparacion->fecha_vencimiento_garantia || isset($validated['periodo_garantia_dias'])) {
@@ -759,6 +783,7 @@ class ReparacionesController extends Controller
         }
 
         $reparacion->update($validated);
+        $this->sincronizarEstadoEquipo($reparacion);
 
         // Limpiar caché del dashboard cuando se actualiza una reparación
         Cache::forget('dashboard.siguiente_mantenimiento');
@@ -773,7 +798,7 @@ class ReparacionesController extends Controller
         if ($debeNotificarCliente) {
             $urlWhatsApp = $this->buildWhatsAppEstadoUrl($reparacion);
             if ($urlWhatsApp) {
-                return $this->redirectWithWhatsApp($urlWhatsApp, $redirectUrl, $successMessage);
+                return $this->redirectWithWhatsApp($urlWhatsApp, $redirectUrl, $successMessage, null, true);
             }
 
             return redirect()->to($redirectUrl)
@@ -872,7 +897,7 @@ class ReparacionesController extends Controller
         }
         
         // Verificar que el trabajo no esté ya completado
-        if (in_array($reparacion->estado, ['Finalizado', 'Entregado'])) {
+        if (in_array($reparacion->estado, ['Finalizado', 'Sin Reparación', 'Entregado'])) {
             return back()->with('error', 'Este trabajo ya está completado.');
         }
         
@@ -891,6 +916,7 @@ class ReparacionesController extends Controller
         $reparacion->porcentaje_comision = $porcentajeComision;
         $reparacion->monto_comision = $montoComision;
         $reparacion->save();
+        $this->sincronizarEstadoEquipo($reparacion);
         
         // Registrar en historial
         EstadoReparacion::create([
@@ -953,7 +979,7 @@ class ReparacionesController extends Controller
         $urlWhatsApp = $this->buildWhatsAppEstadoUrl($reparacion);
 
         if ($urlWhatsApp) {
-            return $this->redirectWithWhatsApp($urlWhatsApp, $redirectUrl, $successMessage);
+            return $this->redirectWithWhatsApp($urlWhatsApp, $redirectUrl, $successMessage, null, true);
         }
 
         return redirect()->to($redirectUrl)
@@ -1072,6 +1098,7 @@ class ReparacionesController extends Controller
             'Esperando Pieza' => 'Tu equipo está a la espera de una pieza para poder continuar.',
             'En Proceso' => 'Tu reparación ya está en proceso.',
             'Finalizado' => 'Tu equipo ya fue reparado y está listo para entrega.',
+            'Sin Reparación' => 'El diagnóstico de tu equipo ha finalizado. Lamentablemente el equipo no pudo ser reparado.',
             'Entregado' => 'Tu equipo ya fue entregado. Gracias por preferirnos.',
             'Cancelado' => 'El proceso de reparación fue cancelado.',
             default => "El estado actual de tu equipo es: *{$reparacion->estado}*.",
@@ -1094,7 +1121,7 @@ class ReparacionesController extends Controller
         return in_array($estado, ['Pendiente Revisión Admin'], true);
     }
 
-    private function redirectWithWhatsApp(string $urlWhatsApp, string $returnUrl, string $successMessage, ?bool $autoImprimir = null)
+    private function redirectWithWhatsApp(string $urlWhatsApp, string $returnUrl, string $successMessage, ?bool $autoImprimir = null, bool $openInSameTab = false)
     {
         if ($autoImprimir !== null) {
             $separator = str_contains($returnUrl, '?') ? '&' : '?';
@@ -1106,7 +1133,35 @@ class ReparacionesController extends Controller
             'returnUrl' => $returnUrl,
             'successMessage' => $successMessage,
             'autoImprimir' => $autoImprimir,
+            'openInSameTab' => $openInSameTab,
         ]);
+    }
+
+    private function sincronizarEstadoEquipo(Reparacion $reparacion): void
+    {
+        $reparacion->loadMissing('equipo');
+
+        if (!$reparacion->equipo) {
+            return;
+        }
+
+        $estadoEquipo = match ($reparacion->estado) {
+            'Recibido' => 'recibido',
+            'En DiagnÃ³stico' => 'diagnostico',
+            'Pendiente RevisiÃ³n Admin',
+            'Esperando AprobaciÃ³n',
+            'Aprobado',
+            'Esperando Pieza',
+            'En Proceso' => $reparacion->es_garantia ? 'garantia' : 'reparacion',
+            'Finalizado', 'Sin Reparación' => 'listo',
+            'Entregado' => 'entregado',
+            default => $reparacion->equipo->estado,
+        };
+
+        if ($reparacion->equipo->estado !== $estadoEquipo) {
+            $reparacion->equipo->estado = $estadoEquipo;
+            $reparacion->equipo->save();
+        }
     }
 
     /**
@@ -1125,5 +1180,43 @@ class ReparacionesController extends Controller
         ]);
 
         return back()->with('success', 'Nota agregada exitosamente');
+    }
+
+    public function updateHistorialComentario(Request $request, Reparacion $reparacion, EstadoReparacion $historial)
+    {
+        $usuario = auth()->user();
+        if (!$usuario || !$usuario->hasRole('administrador')) {
+            abort(403, 'Solo un administrador puede editar comentarios del historial.');
+        }
+
+        if ((int) $historial->reparacion_id !== (int) $reparacion->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'comentario' => 'required|string|max:500',
+        ]);
+
+        $historial->comentario = $validated['comentario'];
+        $historial->save();
+
+        return back()->with('success', 'Comentario del historial actualizado exitosamente.');
+    }
+
+    public function destroyHistorialComentario(Reparacion $reparacion, EstadoReparacion $historial)
+    {
+        $usuario = auth()->user();
+        if (!$usuario || !$usuario->hasRole('administrador')) {
+            abort(403, 'Solo un administrador puede eliminar comentarios del historial.');
+        }
+
+        if ((int) $historial->reparacion_id !== (int) $reparacion->id) {
+            abort(404);
+        }
+
+        $historial->comentario = null;
+        $historial->save();
+
+        return back()->with('success', 'Comentario del historial eliminado exitosamente.');
     }
 }

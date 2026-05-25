@@ -33,6 +33,7 @@ class FacturaConfiguracionRequest extends FormRequest
             'pie_factura' => 'nullable|string',
             'terminos_condiciones' => 'nullable|string',
             'impuesto_porcentaje' => 'nullable|numeric|min:0|max:100',
+            'impuestos_activos' => 'nullable|boolean',
             'ncf_codigo' => 'nullable|string|max:50',
             'moneda' => 'required|string|max:10',
             'simbolo_moneda' => 'required|string|max:5',

@@ -1,6 +1,7 @@
 @extends('layouts.app', ['class' => 'g-sidenav-show bg-gray-100'])
 
 @section('content')
+    @php($mostrarImpuestos = \App\Models\FacturaConfiguracion::obtener()->impuestosHabilitados())
     @include('layouts.navbars.auth.topnav', ['title' => 'Gestión de Facturas'])
     <div class="container-fluid py-4">
         <!-- Page Heading -->
@@ -101,7 +102,9 @@
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Equipo</th>
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Fecha</th>
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Subtotal</th>
+                                        @if($mostrarImpuestos)
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Impuestos</th>
+                                        @endif
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Total</th>
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Acciones</th>
                                     </tr>
@@ -150,11 +153,13 @@
                                                 ${{ number_format($factura->subtotal, 2) }}
                                             </span>
                                         </td>
+                                        @if($mostrarImpuestos)
                                         <td class="align-middle text-end">
                                             <span class="text-secondary text-xs font-weight-bold">
                                                 ${{ number_format($factura->impuestos, 2) }}
                                             </span>
                                         </td>
+                                        @endif
                                         <td class="align-middle text-end">
                                             <span class="text-success text-xs font-weight-bold">
                                                 ${{ number_format($factura->total, 2) }}
@@ -197,7 +202,7 @@
                                     </tr>
                                     @empty
                                     <tr>
-                                        <td colspan="8" class="text-center py-4">
+                                        <td colspan="{{ $mostrarImpuestos ? 8 : 7 }}" class="text-center py-4">
                                             <p class="text-muted mb-0">No se encontraron facturas</p>
                                         </td>
                                     </tr>

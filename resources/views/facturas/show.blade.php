@@ -92,7 +92,9 @@
                                     <tr>
                                         <th>Descripción</th>
                                         <th class="text-end">Subtotal</th>
+                                        @if($mostrarImpuestos)
                                         <th class="text-end">Impuestos</th>
+                                        @endif
                                         <th class="text-end">Total</th>
                                     </tr>
                                 </thead>
@@ -100,7 +102,7 @@
                                     <tr>
                                         <td>
                                             @if($factura->reparacion)
-                                                {{ $factura->reparacion->tipo_servicio === 'mantenimiento' ? 'Mantenimiento' : 'Reparación' }} - 
+                                                {{ $factura->reparacion->descripcion_cotizacion ?: ($factura->reparacion->tipo_servicio === 'mantenimiento' ? 'Mantenimiento' : ($factura->reparacion->estado === 'Sin Reparación' ? 'Diagnóstico / revisión técnica' : 'Reparación')) }} - 
                                                 {{ $factura->equipo->tipo ?? 'N/A' }} 
                                                 {{ $factura->equipo->marca ?? '' }} 
                                                 {{ $factura->equipo->modelo ?? '' }}
@@ -109,6 +111,7 @@
                                             @endif
                                         </td>
                                         <td class="text-end">{{ $configuracion->simbolo_moneda }}{{ number_format($factura->subtotal, 2) }}</td>
+                                        @if($mostrarImpuestos)
                                         <td class="text-end">
                                             @if($factura->aplicar_impuesto)
                                                 {{ $configuracion->simbolo_moneda }}{{ number_format($factura->impuestos, 2) }}
@@ -116,12 +119,13 @@
                                                 {{ $configuracion->simbolo_moneda }}0.00
                                             @endif
                                         </td>
+                                        @endif
                                         <td class="text-end"><strong>{{ $configuracion->simbolo_moneda }}{{ number_format($factura->total, 2) }}</strong></td>
                                     </tr>
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <th colspan="3" class="text-end">Total:</th>
+                                        <th colspan="{{ $mostrarImpuestos ? 3 : 2 }}" class="text-end">Total:</th>
                                         <th class="text-end">{{ $configuracion->simbolo_moneda }}{{ number_format($factura->total, 2) }}</th>
                                     </tr>
                                 </tfoot>

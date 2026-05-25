@@ -21,6 +21,32 @@
             font-size: 0.9rem;
             padding: 0.5rem 1rem;
         }
+        .quote-card .card-header h5 {
+            font-size: 1.35rem;
+        }
+        .quote-card .quote-label {
+            font-size: 1rem;
+        }
+        .quote-card .quote-value {
+            font-size: 1.15rem;
+        }
+        .quote-card .quote-total {
+            font-size: 2rem;
+            line-height: 1.1;
+        }
+        .quote-card .quote-description {
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+            .consulta-card {
+                box-shadow: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -112,8 +138,8 @@
                         <i class="fas fa-user-shield me-2"></i>
                         La cotización de este equipo sigue en revisión interna. Cuando el taller la confirme, aquí aparecerá la opción para aprobarla o rechazarla.
                     </div>
-                    @elseif($cotizacionDisponiblePublicamente && (($reparacionActual->precio_cotizado && $reparacionActual->precio_cotizado > 0) || $reparacionActual->estado == 'Esperando Aprobación'))
-                    <div class="card mb-4 {{ $reparacionActual->estado == 'Esperando Aprobación' ? 'border-warning' : ($reparacionActual->cliente_aprobado === true ? 'border-success' : ($reparacionActual->cliente_aprobado === false ? 'border-danger' : '')) }}">
+                    @elseif($cotizacionDisponiblePublicamente && ((($reparacionActual->precio_cotizado && $reparacionActual->precio_cotizado > 0) || ($reparacionActual->total_estimado && $reparacionActual->total_estimado > 0) || ($reparacionActual->factura && $reparacionActual->factura->total > 0)) || $reparacionActual->estado == 'Esperando Aprobación'))
+                    <div class="card quote-card mb-4 {{ $reparacionActual->estado == 'Esperando Aprobación' ? 'border-warning' : ($reparacionActual->cliente_aprobado === true ? 'border-success' : ($reparacionActual->cliente_aprobado === false ? 'border-danger' : '')) }}">
                         <div class="card-header {{ $reparacionActual->estado == 'Esperando Aprobación' ? 'bg-warning text-dark' : ($reparacionActual->cliente_aprobado === true ? 'bg-success text-white' : ($reparacionActual->cliente_aprobado === false ? 'bg-danger text-white' : 'bg-info text-white')) }}">
                             <h5 class="mb-0">
                                 <i class="fas fa-dollar-sign me-2"></i>
@@ -123,29 +149,31 @@
                                     Cotización Aprobada
                                 @elseif($reparacionActual->cliente_aprobado === false)
                                     Cotización Rechazada
+                                @elseif($reparacionActual->estado == 'Sin Reparación')
+                                    Resumen del Servicio
                                 @else
                                     Cotización
                                 @endif
                             </h5>
                         </div>
                         <div class="card-body">
-                            @if($reparacionActual->precio_cotizado && $reparacionActual->precio_cotizado > 0)
                             @php
-                                $aplicarImpuestoCot = $reparacionActual->factura ? $reparacionActual->factura->aplicar_impuesto : ($reparacionActual->aplicar_impuesto_cotizacion ?? true);
-                                $pctImpuesto = isset($porcentajeImpuesto) ? (float) $porcentajeImpuesto : 18.00;
-                                $subtotalCot = (float) $reparacionActual->precio_cotizado;
+                                $subtotalCot = (float) ($reparacionActual->factura?->subtotal ?? ($reparacionActual->precio_cotizado ?: $reparacionActual->total_estimado ?: 0));
+                        $aplicarImpuestoCot = ($impuestosActivos ?? true) && ($reparacionActual->factura ? $reparacionActual->factura->aplicar_impuesto : ($reparacionActual->aplicar_impuesto_cotizacion ?? false));
+                                $pctImpuesto = isset($porcentajeImpuesto) ? (float) $porcentajeImpuesto : 0;
                                 $impuestosCot = $aplicarImpuestoCot ? round($subtotalCot * ($pctImpuesto / 100), 2) : 0;
-                                $totalConImpuesto = $subtotalCot + $impuestosCot;
+                                $totalConImpuesto = $reparacionActual->factura ? (float) $reparacionActual->factura->total : $subtotalCot + $impuestosCot;
                             @endphp
+                            @if($subtotalCot > 0)
                             <div class="text-center mb-4">
-                                <p class="text-muted mb-1">Subtotal (reparación)</p>
-                                <p class="mb-1">${{ number_format($subtotalCot, 2) }}</p>
+                                <p class="text-muted quote-label mb-1">{{ $reparacionActual->estado === 'Sin Reparación' ? 'Costo del servicio' : 'Subtotal (reparación)' }}</p>
+                                <p class="quote-value mb-1">${{ number_format($subtotalCot, 2) }}</p>
                                 @if($aplicarImpuestoCot)
-                                <p class="text-muted mb-1 mt-2">Impuesto ({{ number_format($pctImpuesto, 0) }}%)</p>
-                                <p class="mb-1">${{ number_format($impuestosCot, 2) }}</p>
+                                <p class="text-muted quote-label mb-1 mt-2">Impuesto ({{ number_format($pctImpuesto, 0) }}%)</p>
+                                <p class="quote-value mb-1">${{ number_format($impuestosCot, 2) }}</p>
                                 @endif
-                                <h2 class="text-primary mb-2 mt-3">${{ number_format($totalConImpuesto, 2) }}</h2>
-                                <p class="text-muted mb-1"><strong>Total a pagar</strong></p>
+                                <h2 class="text-primary quote-total mb-2 mt-3">${{ number_format($totalConImpuesto, 2) }}</h2>
+                                <p class="text-muted quote-label mb-1"><strong>{{ $reparacionActual->estado === 'Sin Reparación' ? 'Total a cobrar' : 'Total a pagar' }}</strong></p>
                                 @if($reparacionActual->fecha_cotizacion)
                                     <small class="text-muted">
                                         <i class="fas fa-calendar me-1"></i>
@@ -160,11 +188,11 @@
                                     <div class="card-header bg-info text-white">
                                         <h6 class="mb-0 fw-bold">
                                             <i class="fas fa-clipboard-list me-2"></i>
-                                            Detalles de la Cotización
+                                            {{ $reparacionActual->estado == 'Sin Reparación' ? 'Detalles del Servicio' : 'Detalles de la Cotización' }}
                                         </h6>
                                     </div>
                                     <div class="card-body">
-                                        <div style="white-space: pre-line; line-height: 1.6;">{{ $reparacionActual->descripcion_cotizacion }}</div>
+                                        <div class="quote-description" style="white-space: pre-line;">{{ $reparacionActual->descripcion_cotizacion }}</div>
                                     </div>
                                 </div>
                             </div>

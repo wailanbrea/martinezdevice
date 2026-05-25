@@ -52,6 +52,9 @@
                                         <option value="Esperando Pieza" {{ request('estado') == 'Esperando Pieza' ? 'selected' : '' }}>Esperando Pieza</option>
                                         <option value="En Proceso" {{ request('estado') == 'En Proceso' ? 'selected' : '' }}>En Proceso</option>
                                         <option value="Finalizado" {{ request('estado') == 'Finalizado' ? 'selected' : '' }}>Finalizado</option>
+                                        <option value="Sin Reparación" {{ request('estado') == 'Sin Reparación' ? 'selected' : '' }}>Sin Reparación</option>
+                                        <option value="Entregado" {{ request('estado') == 'Entregado' ? 'selected' : '' }}>Entregado</option>
+                                        <option value="Cancelado" {{ request('estado') == 'Cancelado' ? 'selected' : '' }}>Cancelado</option>
                                     </select>
                                 </div>
 
@@ -268,4 +271,3 @@
         @include('layouts.footers.auth.footer')
     </div>
 @endsection
-

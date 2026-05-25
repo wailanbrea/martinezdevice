@@ -30,6 +30,7 @@ class FacturaConfiguracionController extends Controller
         Log::info('FacturaConfiguracion update iniciado', ['empresa_nombre' => $request->input('empresa_nombre')]);
 
         $validated = $request->validated();
+        $validated['impuestos_activos'] = $request->boolean('impuestos_activos');
 
         $configuracion = FacturaConfiguracion::find(1) ?? FacturaConfiguracion::obtener();
 
@@ -58,7 +59,7 @@ class FacturaConfiguracionController extends Controller
         $columnasPermitidas = [
             'empresa_nombre', 'empresa_cedula_rnc', 'empresa_direccion', 'empresa_telefono',
             'empresa_email', 'empresa_website', 'logo_path', 'encabezado_factura', 'pie_factura',
-            'terminos_condiciones', 'impuesto_porcentaje', 'ncf_codigo', 'moneda', 'simbolo_moneda',
+            'terminos_condiciones', 'impuesto_porcentaje', 'impuestos_activos', 'ncf_codigo', 'moneda', 'simbolo_moneda',
             'mostrar_logo', 'mostrar_terminos', 'formato_numero_factura'
         ];
         $datosUpdate = array_intersect_key($validated, array_flip($columnasPermitidas));
@@ -71,6 +72,23 @@ class FacturaConfiguracionController extends Controller
             $datosUpdate['id'] = 1;
             $datosUpdate['created_at'] = now();
             DB::connection()->table('factura_configuracion')->insert($datosUpdate);
+        }
+
+        if (!$validated['impuestos_activos']) {
+            DB::transaction(function () {
+                DB::table('facturas')->update([
+                    'aplicar_impuesto' => false,
+                    'ncf' => null,
+                    'impuestos' => 0,
+                    'total' => DB::raw('subtotal'),
+                    'updated_at' => now(),
+                ]);
+
+                DB::table('reparaciones')->update([
+                    'aplicar_impuesto_cotizacion' => false,
+                    'updated_at' => now(),
+                ]);
+            });
         }
 
         Log::info('FacturaConfiguracion update completado', ['empresa_nombre' => $datosUpdate['empresa_nombre'] ?? '']);

@@ -244,6 +244,22 @@
                                     <p class="text-sm mt-2 mb-0">
                                         {{ $estado->comentario }}
                                     </p>
+                                    @if(auth()->user()->hasRole('administrador'))
+                                    <div class="d-flex gap-2 mt-2">
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm py-1 px-2"
+                                                onclick="editarComentarioHistorial('{{ route('reparaciones.historial.update', [$reparacion->id, $estado->id]) }}', @js($estado->comentario))">
+                                            <i class="fas fa-pen me-1"></i>Editar
+                                        </button>
+                                        <form method="POST" action="{{ route('reparaciones.historial.destroy', [$reparacion->id, $estado->id]) }}" onsubmit="return confirm('¿Quitar este comentario del historial?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-2">
+                                                <i class="fas fa-trash me-1"></i>Quitar
+                                            </button>
+                                        </form>
+                                    </div>
+                                    @endif
                                     @endif
                                     <p class="text-xs text-muted mt-1">
                                         Por: {{ $estado->usuario->firstname }} {{ $estado->usuario->lastname }}
@@ -260,4 +276,30 @@
         @include('layouts.footers.auth.footer')
     </div>
 @endsection
+
+@push('js')
+<script>
+    function editarComentarioHistorial(actionUrl, comentarioActual) {
+        const nuevoComentario = prompt('Editar comentario del historial:', comentarioActual ?? '');
+        if (nuevoComentario === null) {
+            return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = actionUrl;
+        form.style.display = 'none';
+
+        form.innerHTML = `
+            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="_method" value="PUT">
+            <input type="hidden" name="comentario" value="">
+        `;
+
+        form.querySelector('input[name="comentario"]').value = nuevoComentario;
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+@endpush
 
