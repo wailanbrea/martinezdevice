@@ -149,18 +149,7 @@
                         <div class="mb-3">
                             <label class="form-label text-xs">Estado actual</label>
                             <p>
-                                @php
-                                    $badgeClass = match($reparacion->estado) {
-                                        'Recibido' => 'bg-gradient-secondary',
-                                        'En Diagnóstico' => 'bg-gradient-info',
-                                        'Esperando Pieza' => 'bg-gradient-warning',
-                                        'En Proceso' => 'bg-gradient-primary',
-                                        'Finalizado' => 'bg-gradient-success',
-                                        'Cancelado' => 'bg-gradient-danger',
-                                        default => 'bg-gradient-secondary',
-                                    };
-                                @endphp
-                                <span class="badge {{ $badgeClass }}">{{ $reparacion->estado }}</span>
+                                <x-badge-estado :estado="$reparacion->estado" size="sm" />
                             </p>
                         </div>
 

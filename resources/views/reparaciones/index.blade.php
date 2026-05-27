@@ -134,18 +134,7 @@
                                             <span class="text-xs">{{ $reparacion->fecha_ingreso->format('d/m/Y') }}</span>
                                         </td>
                                         <td class="align-middle text-center">
-                                            @php
-                                                $badgeClass = match($reparacion->estado) {
-                                                    'Recibido' => 'bg-gradient-secondary',
-                                                    'En Diagnóstico' => 'bg-gradient-info',
-                                                    'Esperando Pieza' => 'bg-gradient-warning',
-                                                    'En Proceso' => 'bg-gradient-primary',
-                                                    'Finalizado' => 'bg-gradient-success',
-                                                    'Cancelado' => 'bg-gradient-danger',
-                                                    default => 'bg-gradient-secondary',
-                                                };
-                                            @endphp
-                                            <span class="badge badge-sm {{ $badgeClass }}">{{ $reparacion->estado }}</span>
+                                            <x-badge-estado :estado="$reparacion->estado" size="sm" />
                                         </td>
                                         <td class="align-middle text-center">
                                             <a href="{{ route('reparaciones.show', $reparacion) }}" class="text-secondary font-weight-bold text-xs me-2" title="Ver detalles">

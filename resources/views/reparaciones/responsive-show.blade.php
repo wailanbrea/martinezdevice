@@ -223,18 +223,9 @@
                             </div>
                         </form>
                         <div class="mt-3 p-3 bg-light rounded">
-                            <span class="badge 
-                                @if($reparacion->estado == 'Recibido') bg-secondary
-                                @elseif($reparacion->estado == 'En Diagnóstico') bg-warning
-                                @elseif($reparacion->estado == 'Pendiente Revisión Admin') bg-dark
-                                @elseif($reparacion->estado == 'Esperando Pieza') bg-orange
-                                @elseif($reparacion->estado == 'En Proceso') bg-info
-                                @elseif($reparacion->estado == 'Finalizado') bg-success
-                                @elseif($reparacion->estado == 'Sin Reparación') bg-warning
-                                @elseif($reparacion->estado == 'Entregado') bg-primary
-                                @else bg-danger
-                                @endif px-3 py-2">
-                                Estado Actual: {{ $reparacion->estado }}
+                            <span class="d-inline-flex align-items-center gap-2 flex-wrap">
+                                <span class="fw-semibold text-dark">Estado Actual:</span>
+                                <x-badge-estado :estado="$reparacion->estado" size="md" />
                             </span>
                         </div>
                         @if($reparacion->cotizacion_revisada_at)

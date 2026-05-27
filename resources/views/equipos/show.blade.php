@@ -110,17 +110,7 @@
                                             <i class="fas fa-user-check me-1"></i>
                                             <strong>Recibido por:</strong> {{ $reparacion->recepcionista ? $reparacion->recepcionista->firstname . ' ' . $reparacion->recepcionista->lastname : 'No registrado' }}
                                         </p>
-                                        @php
-                                            $badgeClass = match($reparacion->estado) {
-                                                'Recibido' => 'bg-gradient-secondary',
-                                                'En Diagnóstico' => 'bg-gradient-info',
-                                                'Esperando Pieza' => 'bg-gradient-warning',
-                                                'En Proceso' => 'bg-gradient-primary',
-                                                'Finalizado' => 'bg-gradient-success',
-                                                default => 'bg-gradient-secondary',
-                                            };
-                                        @endphp
-                                        <span class="badge {{ $badgeClass }}">{{ $reparacion->estado }}</span>
+                                        <x-badge-estado :estado="$reparacion->estado" size="sm" />
                                         <span class="badge bg-gradient-dark">${{ number_format($reparacion->total_estimado, 2) }}</span>
                                     </div>
                                     <div>
