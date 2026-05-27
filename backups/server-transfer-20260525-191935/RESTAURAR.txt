@@ -1,0 +1,48 @@
+PAQUETE DE TRASLADO DEL SISTEMA
+
+Contenido:
+- martinez_device_current-20260525-185229.sql
+- storage-app-public.zip
+
+Que restaura cada archivo:
+- El archivo .sql restaura la base de datos completa:
+  clientes, equipos, reparaciones, facturas, historial, notas y configuracion.
+- El archivo storage-app-public.zip restaura los archivos subidos:
+  fotos de equipos, imagenes y demas archivos publicados por Laravel en storage/app/public.
+
+Pasos recomendados para restaurar en el servidor nuevo:
+
+1. Subir el codigo del proyecto al servidor nuevo.
+
+2. Crear la base de datos vacia:
+   Ejemplo:
+   mysql -u root -p -e "CREATE DATABASE martinez_device_current CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+3. Importar la base de datos:
+   Ejemplo:
+   mysql -u root -p martinez_device_current < martinez_device_current-20260525-185229.sql
+
+4. Descomprimir storage-app-public.zip dentro de:
+   storage/app/public
+
+   La ruta final debe quedar asi:
+   proyecto/storage/app/public/...
+
+5. Verificar o recrear el enlace publico de Laravel:
+   php artisan storage:link
+
+6. Configurar el .env del servidor nuevo con los datos correctos de MySQL.
+
+7. Limpiar cache de Laravel:
+   php artisan config:clear
+   php artisan cache:clear
+   php artisan view:clear
+
+Validaciones despues de restaurar:
+- Revisar que aparezcan clientes, equipos y reparaciones.
+- Revisar que las facturas abran correctamente.
+- Revisar que las fotos carguen en el sistema.
+
+Importante:
+- No ejecutar "php artisan migrate:fresh" despues de importar este respaldo.
+- Si el servidor nuevo ya tenia una base con datos, conviene reemplazarla por una vacia antes de importar.

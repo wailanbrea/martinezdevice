@@ -49,6 +49,7 @@
                                         <option value="">Todos los estados</option>
                                         <option value="Recibido" {{ request('estado') == 'Recibido' ? 'selected' : '' }}>Recibido</option>
                                         <option value="En Diagnóstico" {{ request('estado') == 'En Diagnóstico' ? 'selected' : '' }}>En Diagnóstico</option>
+                                        <option value="Aprobado" {{ in_array(request('estado'), ['Aprobado', 'APROBADO', 'aprobado']) ? 'selected' : '' }}>Aprobado</option>
                                         <option value="Esperando Pieza" {{ request('estado') == 'Esperando Pieza' ? 'selected' : '' }}>Esperando Pieza</option>
                                         <option value="En Proceso" {{ request('estado') == 'En Proceso' ? 'selected' : '' }}>En Proceso</option>
                                         <option value="Finalizado" {{ request('estado') == 'Finalizado' ? 'selected' : '' }}>Finalizado</option>

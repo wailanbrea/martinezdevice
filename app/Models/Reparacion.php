@@ -11,6 +11,19 @@ class Reparacion extends Model
 
     public const ESTADO_LISTO_LEGACY = 'listo';
     public const ESTADO_FINALIZADO = 'Finalizado';
+    private const ESTADO_ALIASES = [
+        'finalizado' => ['Finalizado', 'FINALIZADO', 'finalizado', 'listo'],
+        'aprobado' => ['Aprobado', 'APROBADO', 'aprobado'],
+        'recibido' => ['Recibido', 'RECIBIDO', 'recibido'],
+        'en diagnóstico' => ['En Diagnóstico', 'EN DIAGNÓSTICO', 'En Diagnostico', 'EN DIAGNOSTICO', 'en diagnóstico', 'en diagnostico'],
+        'pendiente revisión admin' => ['Pendiente Revisión Admin', 'PENDIENTE REVISIÓN ADMIN', 'Pendiente Revision Admin', 'PENDIENTE REVISION ADMIN'],
+        'esperando aprobación' => ['Esperando Aprobación', 'ESPERANDO APROBACIÓN', 'Esperando Aprobacion', 'ESPERANDO APROBACION'],
+        'esperando pieza' => ['Esperando Pieza', 'ESPERANDO PIEZA', 'esperando pieza'],
+        'en proceso' => ['En Proceso', 'EN PROCESO', 'en proceso'],
+        'sin reparación' => ['Sin Reparación', 'SIN REPARACIÓN', 'Sin Reparacion', 'SIN REPARACION', 'sin reparación', 'sin reparacion'],
+        'entregado' => ['Entregado', 'ENTREGADO', 'entregado'],
+        'cancelado' => ['Cancelado', 'CANCELADO', 'cancelado'],
+    ];
 
     protected $table = 'reparaciones';
 
@@ -201,10 +214,24 @@ class Reparacion extends Model
             return $query;
         }
 
-        if ($estado === self::ESTADO_FINALIZADO) {
-            return $query->whereIn('estado', [self::ESTADO_FINALIZADO, self::ESTADO_LISTO_LEGACY]);
+        $variantes = self::variantesEstado($estado);
+
+        return $query->where(function ($subQuery) use ($variantes) {
+            foreach (array_unique($variantes) as $variante) {
+                $subQuery->orWhereRaw('LOWER(estado) = LOWER(?)', [$variante]);
+            }
+        });
+    }
+
+    public static function variantesEstado(string $estado): array
+    {
+        $estadoNormalizado = mb_strtolower(trim($estado));
+        $variantes = self::ESTADO_ALIASES[$estadoNormalizado] ?? [$estado];
+
+        if (in_array(self::ESTADO_LISTO_LEGACY, $variantes, true) && !in_array(self::ESTADO_FINALIZADO, $variantes, true)) {
+            $variantes[] = self::ESTADO_FINALIZADO;
         }
 
-        return $query->where('estado', $estado);
+        return array_values(array_unique($variantes));
     }
 }

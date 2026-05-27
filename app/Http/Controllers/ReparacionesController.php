@@ -40,6 +40,7 @@ class ReparacionesController extends Controller
             'equipo:id,cliente_id,marca,modelo,tipo,numero_serie',
             'equipo.cliente:id,nombre,telefono',
             'equipo.fotos:id,equipo_id,ruta',
+            'factura:id,reparacion_id,total',
             'tecnico:id,firstname,lastname',
             'recepcionista:id,firstname,lastname'
         ]);
@@ -67,7 +68,13 @@ class ReparacionesController extends Controller
         if ($request->has('estado') && $request->estado != '') {
             if ($request->estado == 'pendientes') {
                 // Estados pendientes: todos los que no están finalizados o entregados
-                $query->whereIn('estado', self::ESTADOS_PENDIENTES);
+                $query->where(function ($subQuery) {
+                    foreach (self::ESTADOS_PENDIENTES as $estadoPendiente) {
+                        foreach (Reparacion::variantesEstado($estadoPendiente) as $variante) {
+                            $subQuery->orWhereRaw('LOWER(estado) = LOWER(?)', [$variante]);
+                        }
+                    }
+                });
             } else {
                 $query->whereEstadoNormalizado($request->estado);
             }

@@ -186,6 +186,10 @@
                                     class="filter-chip {{ request('estado') == 'Pendiente Revisión Admin' ? 'active' : '' }}">
                                 Rev. Admin
                             </button>
+                            <button type="button" onclick="setFilter('Aprobado')"
+                                    class="filter-chip {{ in_array(request('estado'), ['Aprobado', 'APROBADO', 'aprobado']) ? 'active' : '' }}">
+                                Aprobado
+                            </button>
                             <button type="button" onclick="setFilter('En Proceso')"
                                     class="filter-chip {{ request('estado') == 'En Proceso' ? 'active' : '' }}">
                                 En Proceso
@@ -234,11 +238,12 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small mb-1" style="font-size: 0.75rem;">Estado</label>
-                                <select name="estado" class="form-select form-select-sm">
+                                <select id="estadoDesktop" class="form-select form-select-sm">
                                     <option value="">Todos</option>
                                     <option value="Recibido" {{ request('estado') == 'Recibido' ? 'selected' : '' }}>Recibido</option>
                                     <option value="En Diagnóstico" {{ request('estado') == 'En Diagnóstico' ? 'selected' : '' }}>Diagnóstico</option>
                                     <option value="Pendiente Revisión Admin" {{ request('estado') == 'Pendiente Revisión Admin' ? 'selected' : '' }}>Pendiente Rev. Admin</option>
+                                    <option value="Aprobado" {{ in_array(request('estado'), ['Aprobado', 'APROBADO', 'aprobado']) ? 'selected' : '' }}>Aprobado</option>
                                     <option value="Esperando Pieza" {{ request('estado') == 'Esperando Pieza' ? 'selected' : '' }}>Esperando Pieza</option>
                                     <option value="En Proceso" {{ request('estado') == 'En Proceso' ? 'selected' : '' }}>En Proceso</option>
                                     <option value="Finalizado" {{ request('estado') == 'Finalizado' ? 'selected' : '' }}>Finalizado</option>
@@ -315,6 +320,10 @@
                         <x-badge-estado :estado="$reparacion->estado" size="sm" />
                     </div>
 
+                    @php
+                        $totalListado = (float) ($reparacion->factura->total ?? $reparacion->precio_cotizado ?? $reparacion->total_estimado ?? 0);
+                    @endphp
+
                     <div class="d-flex align-items-center gap-3 mb-3">
                         @php
                             $tieneFotos = $reparacion->equipo->fotos && $reparacion->equipo->fotos->count() > 0;
@@ -385,7 +394,7 @@
                         @if($reparacion->tecnico)
                             <span><i class="fas fa-user-cog me-1"></i>{{ $reparacion->tecnico->firstname }}</span>
                         @endif
-                        <span class="fw-bold text-primary">${{ number_format($reparacion->total_estimado, 2) }}</span>
+                        <span class="fw-bold text-primary">${{ number_format($totalListado, 2) }}</span>
                     </div>
                 </div>
             @empty
@@ -463,7 +472,9 @@
                                     </p>
                                 </td>
                                 <td class="col-fecha"><p class="text-sm mb-0">{{ $reparacion->fecha_ingreso ? $reparacion->fecha_ingreso->format('d/m/Y') : 'N/A' }}</p></td>
-                                <td class="col-total"><p class="text-sm font-weight-bold text-primary mb-0">${{ number_format($reparacion->total_estimado, 2) }}</p></td>
+                                <td class="col-total">
+                                    <p class="text-sm font-weight-bold text-primary mb-0">${{ number_format((float) ($reparacion->factura->total ?? $reparacion->precio_cotizado ?? $reparacion->total_estimado ?? 0), 2) }}</p>
+                                </td>
                                 <td class="col-garantia">
                                     <x-garantia-info :reparacion="$reparacion" />
                                 </td>
@@ -597,6 +608,10 @@
     <script>
         function setFilter(estado) {
             document.getElementById('estadoFilter').value = estado;
+            const estadoDesktop = document.getElementById('estadoDesktop');
+            if (estadoDesktop) {
+                estadoDesktop.value = estado;
+            }
             // Preservar otros filtros al cambiar estado desde chips móviles
             const form = document.getElementById('filterForm');
             const fechaDesde = form.querySelector('[name="fecha_desde"]');
@@ -624,5 +639,25 @@
             
             form.submit();
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('filterForm');
+            const estadoDesktop = document.getElementById('estadoDesktop');
+            const estadoFilter = document.getElementById('estadoFilter');
+
+            if (estadoDesktop && estadoFilter) {
+                estadoDesktop.addEventListener('change', function () {
+                    estadoFilter.value = this.value;
+                });
+            }
+
+            if (form && estadoDesktop && estadoFilter) {
+                form.addEventListener('submit', function () {
+                    if (window.innerWidth >= 992) {
+                        estadoFilter.value = estadoDesktop.value;
+                    }
+                });
+            }
+        });
     </script>
 @endsection
