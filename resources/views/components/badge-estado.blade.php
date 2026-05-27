@@ -1,18 +1,20 @@
 @props(['estado', 'size' => 'sm'])
 
 @php
-    $clases = match ($estado) {
-        'Recibido' => 'bg-secondary',
-        'En Diagnóstico' => 'bg-warning',
-        'Pendiente Revisión Admin' => 'bg-dark',
-        'Esperando Pieza' => 'bg-orange',
-        'Esperando Aprobación' => 'bg-info',
-        'Aprobado' => 'bg-success',
-        'En Proceso' => 'bg-info',
-        'Finalizado' => 'bg-success',
-        'Sin Reparación' => 'bg-warning',
-        'Entregado' => 'bg-primary',
-        'Cancelado' => 'bg-danger',
+    $estadoNormalizado = mb_strtolower(trim((string) $estado));
+
+    $clases = match ($estadoNormalizado) {
+        'recibido' => 'bg-secondary',
+        'en diagnóstico', 'en diagnostico' => 'bg-warning text-dark',
+        'pendiente revisión admin', 'pendiente revision admin' => 'bg-dark',
+        'esperando pieza' => 'bg-warning text-dark',
+        'esperando aprobación', 'esperando aprobacion' => 'bg-info',
+        'aprobado' => 'bg-success',
+        'en proceso' => 'bg-info',
+        'finalizado', 'listo' => 'bg-success',
+        'sin reparación', 'sin reparacion' => 'bg-warning text-dark',
+        'entregado' => 'bg-primary',
+        'cancelado' => 'bg-danger',
         default => 'bg-secondary',
     };
 
